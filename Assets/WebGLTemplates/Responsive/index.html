@@ -1,0 +1,31 @@
+﻿<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>%UNITY_WEB_NAME%</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="TemplateData/UnityProgress.js"></script>
+    <script src="%UNITY_WEBGL_LOADER_URL%"></script>
+    <script>
+        window.UnityLoader = window.UnityLoader || {
+            Error: {}, instantiate: function () {
+            }
+        };
+        window.buildPath = "%UNITY_WEBGL_BUILD_URL%";
+        window.gameInstance = null;
+        if (!/UNITY_WEBGL_BUILD_URL/.test(buildPath)) {
+            window.gameInstance = UnityLoader.instantiate("gameContainer", buildPath, {onProgress: UnityProgress});
+        }
+
+    </script>
+</head>
+<body style="height:100%;">
+<div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+    <div class="webgl-content">
+        <div id="gameContainer" style="width: 635px; height: 375px"></div>
+    </div>
+</div>
+</body>
