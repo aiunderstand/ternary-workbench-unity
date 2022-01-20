@@ -1,0 +1,15 @@
+{
+    "name": "Mixed Radix Converter",
+    "short_name": "Mixed Radix Converter",
+    "start_url": "index.html",
+    "display": "fullscreen",
+    "background_color": "#828080",
+    "theme_color": "#fff",
+    "description": "",
+    "icons": [{
+      "src": "TemplateData/icons/unity-logo-light.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }]
+  }
