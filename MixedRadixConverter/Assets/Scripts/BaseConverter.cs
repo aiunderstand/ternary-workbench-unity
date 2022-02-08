@@ -10,9 +10,16 @@ public class BaseConverter : MonoBehaviour
 {
     public TMP_Dropdown BaseADropbox;
     public TMP_Dropdown BaseBDropbox;
-    public TMP_InputField BaseAInput;
+    public InputField BaseAInput;
     public TMP_InputField Base2Output;
-        
+    public TMP_Text StatusMessage;
+
+    public GameObject InputBase2;
+    public GameObject InputBase3Balanced;
+    public GameObject InputBase3Unbalanced;
+    public GameObject InputBase10;
+    public Text BaseAInputPlaceholder;
+
     public enum Radix
     {
         Base2Unsigned,
@@ -127,9 +134,36 @@ public class BaseConverter : MonoBehaviour
         else
         {
             if (BaseAInput.text.Equals(""))
-                Debug.Log("Empty input detected");
+            {
+                StatusMessage.text = "Waiting for input...";
+                Base2Output.text = "";
+            }
             else
-                Debug.Log("Bad input detected");
+            {
+                switch (baseA)
+                {
+                    case Radix.Base10:
+                        StatusMessage.text = "Incorrect input, base 10 can only use symbols 0-9 with optional minus sign prefix";
+                        Base2Output.text = "";
+                        break;
+                    case Radix.Base3Balanced:
+                        StatusMessage.text = "Incorrect input, base 3 balanced can only use symbols - , 0 and +";
+                        Base2Output.text = "";
+                        break;
+                    case Radix.Base3Unbalanced:
+                        StatusMessage.text = "Incorrect input, base 3 unbalanced can only use symbols 0, 1 and 2";
+                        Base2Output.text = "";
+                        break;
+                    case Radix.Base2Unsigned:
+                        StatusMessage.text = "Incorrect input, base 2 can only use symbols 0 and 1";
+                        Base2Output.text = "";
+                        break;
+                    case Radix.Base2Signed2C:
+                        StatusMessage.text = "Incorrect input, base 2 can only use symbols 0 and 1";
+                        Base2Output.text = "";
+                        break;
+                }
+            }                
         }
     }
 
@@ -137,6 +171,8 @@ public class BaseConverter : MonoBehaviour
     private string ConvertFromTo(Radix SourceBase, Radix TargetBase, int[] symbol)
     {
         string result = "";
+        StatusMessage.text = "Please wait, now converting...";
+        Base2Output.text = "";
 
         int source = 10;
         switch (SourceBase)
@@ -220,7 +256,9 @@ public class BaseConverter : MonoBehaviour
 
         if (inputMustBePositive && !isPos)
         {
-            Debug.Log("input must be positive for unsigned numbers");
+            StatusMessage.text = "Incorrect input, the target base cannot represent negative numbers";
+            Base2Output.text = "";
+            return null;
         }
         else
         {
@@ -228,7 +266,7 @@ public class BaseConverter : MonoBehaviour
             bool found = false;
             int symbolCount = 0;
             Int64 sum = 0;
-
+           
             while (!found)
             {
                 symbolCount++;
@@ -239,9 +277,6 @@ public class BaseConverter : MonoBehaviour
                     found = true;
             }
 
-            Debug.Log("symbols needed: " + symbolCount);
-            Debug.Log("decimal: " + decimalResult);
-
             //do the conversion
             List<int> outputSymbols = new List<int>();
             Int64 remainingSum = decimalResult;
@@ -249,6 +284,7 @@ public class BaseConverter : MonoBehaviour
             switch (TargetBase)
             {
                 case Radix.Base10:
+                    StatusMessage.text = "Successful conversion";
                     return decimalResult.ToString();                 
                 case Radix.Base2Unsigned:
                     {
@@ -362,6 +398,51 @@ public class BaseConverter : MonoBehaviour
             }
         }
 
+        StatusMessage.text = "Successful conversion";
         return result;
+    }
+
+    public void UpdateInputAndConvert()
+    {
+        //parse the enums
+        var partsA = BaseADropbox.options[BaseADropbox.value].text.Split(' ');
+       
+        string partA = "";
+        for (int i = 0; i < partsA.Length; i++)
+        {
+            partA += partsA[i];
+        }
+
+        Radix baseA;
+        Enum.TryParse(partA, out baseA);
+
+        //disable all inputs
+        InputBase2.SetActive(false);
+        InputBase3Balanced.SetActive(false);
+        InputBase3Unbalanced.SetActive(false);
+        InputBase10.SetActive(false);
+
+        switch (baseA)
+        {
+            case Radix.Base10:
+                InputBase10.SetActive(true);
+                BaseAInputPlaceholder.text = "Click or type/paste numbers (eg. -42)";
+                break;
+            case Radix.Base3Balanced:
+                InputBase3Balanced.SetActive(true);
+                BaseAInputPlaceholder.text = "Click or type/paste numbers (eg. ++-0+)";
+                break;
+            case Radix.Base3Unbalanced:
+                InputBase3Unbalanced.SetActive(true);
+                BaseAInputPlaceholder.text = "Click or type/paste numbers (eg. 2120)";
+                break;
+            case Radix.Base2Unsigned:
+            case Radix.Base2Signed2C:
+                InputBase2.SetActive(true);
+                BaseAInputPlaceholder.text = "Click or type/paste numbers(eg. 101110)";                
+                break;
+        }
+
+        Convert();
     }
 }
