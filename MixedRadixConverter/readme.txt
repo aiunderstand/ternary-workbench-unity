@@ -1,1 +1,1 @@
-[See](https://ternaryresearch.com/mixed-radix-converter/ ) 
+See(https://ternaryresearch.com/mixed-radix-converter/ ) 
