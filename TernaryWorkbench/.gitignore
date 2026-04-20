@@ -1,0 +1,10 @@
+# Override the root Unity .gitignore for this .NET solution
+
+# Re-include project and solution files (excluded by Unity .gitignore)
+!*.csproj
+!*.slnx
+!*.sln
+
+# Exclude build outputs
+[Bb]in/
+[Oo]bj/
