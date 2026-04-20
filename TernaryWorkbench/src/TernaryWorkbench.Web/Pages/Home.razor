@@ -1,0 +1,138 @@
+@page "/"
+
+<PageTitle>Ternary Workbench — Radix Converter</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Radix Converter</MudText>
+
+<MudGrid Spacing="3">
+    <!-- Input -->
+    <MudItem xs="12">
+        <MudTextField @bind-Value="_inputValue"
+                      Label="Input value"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.ContentPaste"
+                      OnAdornmentClick="PasteAsync"
+                      Immediate="true"
+                      @bind-Value:after="Recalculate" />
+    </MudItem>
+
+    <!-- From / To radix selectors -->
+    <MudItem xs="12" sm="6">
+        <MudSelect T="Radix" Label="From radix" @bind-Value="_fromRadix"
+                   Variant="Variant.Outlined" FullWidth="true"
+                   @bind-Value:after="OnSettingChanged">
+            @foreach (Radix r in Enum.GetValues<Radix>())
+            {
+                <MudSelectItem Value="r">@r.DisplayName()</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6">
+        <MudSelect T="Radix" Label="To radix" @bind-Value="_toRadix"
+                   Variant="Variant.Outlined" FullWidth="true"
+                   @bind-Value:after="OnSettingChanged">
+            @foreach (Radix r in Enum.GetValues<Radix>())
+            {
+                <MudSelectItem Value="r">@r.DisplayName()</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <!-- Output options -->
+    <MudItem xs="12" sm="6">
+        <MudCheckBox @bind-Value="_lsdFirst"
+                     Label="LSD first (least significant digit first)"
+                     Color="Color.Primary"
+                     @bind-Value:after="Recalculate" />
+    </MudItem>
+
+    <MudItem xs="12" sm="6">
+        <MudTooltip Text="@(_bcdEnabled ? string.Empty : "BCD only available for decimal → base 3/9/27/81 conversions")">
+            <MudCheckBox @bind-Value="_bcdEncoding"
+                         Label="BCD encoding (encode each decimal digit separately)"
+                         Color="Color.Primary"
+                         Disabled="@(!_bcdEnabled)"
+                         @bind-Value:after="Recalculate" />
+        </MudTooltip>
+    </MudItem>
+
+    <!-- Output -->
+    <MudItem xs="12">
+        @if (_errorMessage is not null)
+        {
+            <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+        }
+        else
+        {
+            <MudTextField Value="@_outputValue"
+                          Label="Output"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          ReadOnly="true"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                          OnAdornmentClick="CopyOutputAsync" />
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private string _inputValue = string.Empty;
+    private Radix _fromRadix = Radix.Base10;
+    private Radix _toRadix = Radix.Base3Balanced;
+    private bool _lsdFirst;
+    private bool _bcdEncoding;
+    private string _outputValue = string.Empty;
+    private string? _errorMessage;
+
+    private bool _bcdEnabled =>
+        _fromRadix == Radix.Base10 && _toRadix.SupportsBcd();
+
+    private void OnSettingChanged()
+    {
+        if (!_bcdEnabled) _bcdEncoding = false;
+        Recalculate();
+    }
+
+    private void Recalculate()
+    {
+        if (string.IsNullOrWhiteSpace(_inputValue))
+        {
+            _outputValue = string.Empty;
+            _errorMessage = null;
+            return;
+        }
+        try
+        {
+            var opts = new OutputOptions(LsdFirst: _lsdFirst, BcdEncoding: _bcdEncoding && _bcdEnabled);
+            _outputValue = RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _outputValue = string.Empty;
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task PasteAsync()
+    {
+        try
+        {
+            _inputValue = await JS.InvokeAsync<string>("navigator.clipboard.readText");
+            Recalculate();
+        }
+        catch { /* clipboard permission denied */ }
+    }
+
+    private async Task CopyOutputAsync()
+    {
+        if (!string.IsNullOrEmpty(_outputValue))
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _outputValue);
+    }
+}

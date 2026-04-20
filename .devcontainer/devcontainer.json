@@ -1,0 +1,17 @@
+{
+  "name": "TernaryWorkbench",
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0",
+  "postCreateCommand": "dotnet restore TernaryWorkbench/TernaryWorkbench.sln",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "TernaryWorkbench/TernaryWorkbench.sln"
+      }
+    }
+  },
+  "forwardPorts": [5000, 5001, 7000]
+}

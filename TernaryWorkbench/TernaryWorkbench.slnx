@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TernaryWorkbench.Cli/TernaryWorkbench.Cli.csproj" />
+    <Project Path="src/TernaryWorkbench.Core/TernaryWorkbench.Core.csproj" />
+    <Project Path="src/TernaryWorkbench.Web/TernaryWorkbench.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TernaryWorkbench.Tests/TernaryWorkbench.Tests.csproj" />
+  </Folder>
+</Solution>
