@@ -6,19 +6,63 @@ using Xunit;
 namespace TernaryWorkbench.Tests;
 
 /// <summary>
-/// Exhaustive round-trip tests for all values with ≤6 trits.
-/// 3^6 = 729 values: unbalanced 0..728, balanced −364..364.
+/// Exhaustive per-radix round-trips for all values within the 6-trit range.
+/// 3^6 = 729 unsigned values (0..728); balanced/signed range: −364..364.
+/// Each radix is tested independently via decimal as ground truth.
 /// </summary>
 public class RoundTripTests
 {
     private const int MaxTrits = 6;
-
-    // 3^6 = 729
-    private static readonly int Pow3_6 = (int)Math.Pow(3, MaxTrits);
+    private static readonly int Pow3_6 = (int)Math.Pow(3, MaxTrits);   // 729
+    private static readonly int BalancedMax = (Pow3_6 - 1) / 2;        // 364
 
     // -----------------------------------------------------------------------
-    // Ternary unbalanced: 0 .. 3^6-1
+    // Unsigned radices: 0 .. 728
     // -----------------------------------------------------------------------
+
+    [Fact]
+    public void BinaryUnsigned_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string bin = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base2Unsigned);
+            string dec = RadixConverter.Convert(bin, Radix.Base2Unsigned, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
+
+    [Fact]
+    public void Octal_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string oct = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base8Unsigned);
+            string dec = RadixConverter.Convert(oct, Radix.Base8Unsigned, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
+
+    [Fact]
+    public void Hex_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string hex = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base16Unsigned);
+            string dec = RadixConverter.Convert(hex, Radix.Base16Unsigned, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
+
+    [Fact]
+    public void Base64_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string b64 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base64Rfc4648);
+            string dec = RadixConverter.Convert(b64, Radix.Base64Rfc4648, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
 
     [Fact]
     public void TernaryUnbalanced_ExhaustiveRoundTrip_ViaDecimal()
@@ -42,11 +86,53 @@ public class RoundTripTests
         }
     }
 
+    [Fact]
+    public void Base9_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string b9 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base9Unbalanced);
+            string dec = RadixConverter.Convert(b9, Radix.Base9Unbalanced, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
+
+    [Fact]
+    public void Base27_ExhaustiveRoundTrip()
+    {
+        for (int v = 0; v < Pow3_6; v++)
+        {
+            string b27 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base27Unbalanced);
+            string dec = RadixConverter.Convert(b27, Radix.Base27Unbalanced, Radix.Base10);
+            dec.Should().Be(v.ToString());
+        }
+    }
+
     // -----------------------------------------------------------------------
-    // Balanced ternary: −364 .. +364  (range of 6 trits)
+    // Signed radices: −364 .. +364
     // -----------------------------------------------------------------------
 
-    private static readonly int BalancedMax = (Pow3_6 - 1) / 2;  // 364
+    [Fact]
+    public void Binary1C_ExhaustiveRoundTrip()
+    {
+        for (int v = -BalancedMax; v <= BalancedMax; v++)
+        {
+            string bin = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base2Signed1C);
+            string dec = RadixConverter.Convert(bin, Radix.Base2Signed1C, Radix.Base10);
+            dec.Should().Be(v.ToString(), because: $"1's complement '{bin}' should round-trip to {v}");
+        }
+    }
+
+    [Fact]
+    public void BinarySigned2C_ExhaustiveRoundTrip()
+    {
+        for (int v = -BalancedMax; v <= BalancedMax; v++)
+        {
+            string bin = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base2Signed2C);
+            string dec = RadixConverter.Convert(bin, Radix.Base2Signed2C, Radix.Base10);
+            dec.Should().Be(v.ToString(), because: $"two's complement '{bin}' should round-trip to {v}");
+        }
+    }
 
     [Fact]
     public void BalancedTernary_ExhaustiveRoundTrip_ViaDecimal()
@@ -70,78 +156,26 @@ public class RoundTripTests
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Base-9 round-trip: 0 .. 3^6-1
-    // -----------------------------------------------------------------------
-
     [Fact]
-    public void Base9_ExhaustiveRoundTrip()
-    {
-        for (int v = 0; v < Pow3_6; v++)
-        {
-            string b9 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base9Unbalanced);
-            string dec = RadixConverter.Convert(b9, Radix.Base9Unbalanced, Radix.Base10);
-            dec.Should().Be(v.ToString());
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Base-27 round-trip: 0 .. 3^6-1
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public void Base27_ExhaustiveRoundTrip()
-    {
-        for (int v = 0; v < Pow3_6; v++)
-        {
-            string b27 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base27Unbalanced);
-            string dec = RadixConverter.Convert(b27, Radix.Base27Unbalanced, Radix.Base10);
-            dec.Should().Be(v.ToString());
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Base-81 round-trip: 0 .. 3^6-1
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public void Base81_ExhaustiveRoundTrip()
-    {
-        for (int v = 0; v < Pow3_6; v++)
-        {
-            string b81 = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base81Unbalanced);
-            string dec = RadixConverter.Convert(b81, Radix.Base81Unbalanced, Radix.Base10);
-            dec.Should().Be(v.ToString());
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Binary unsigned round-trip: 0 .. 3^6-1
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public void BinaryUnsigned_ExhaustiveRoundTrip()
-    {
-        for (int v = 0; v < Pow3_6; v++)
-        {
-            string bin = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base2Unsigned);
-            string dec = RadixConverter.Convert(bin, Radix.Base2Unsigned, Radix.Base10);
-            dec.Should().Be(v.ToString());
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Binary two's complement round-trip: −364 .. +364
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public void BinarySigned2C_ExhaustiveRoundTrip()
+    public void Ternary2C_ExhaustiveRoundTrip()
     {
         for (int v = -BalancedMax; v <= BalancedMax; v++)
         {
-            string bin = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base2Signed2C);
-            string dec = RadixConverter.Convert(bin, Radix.Base2Signed2C, Radix.Base10);
-            dec.Should().Be(v.ToString(), because: $"two's complement '{bin}' should round-trip to {v}");
+            string enc = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base3Signed2C);
+            string dec = RadixConverter.Convert(enc, Radix.Base3Signed2C, Radix.Base10);
+            dec.Should().Be(v.ToString(), because: $"ternary 2's complement '{enc}' should round-trip to {v}");
+        }
+    }
+
+    [Fact]
+    public void Ternary3C_ExhaustiveRoundTrip()
+    {
+        for (int v = -BalancedMax; v <= BalancedMax; v++)
+        {
+            string enc = RadixConverter.Convert(v.ToString(), Radix.Base10, Radix.Base3Signed3C);
+            string dec = RadixConverter.Convert(enc, Radix.Base3Signed3C, Radix.Base10);
+            dec.Should().Be(v.ToString(), because: $"ternary 3's complement '{enc}' should round-trip to {v}");
         }
     }
 }
+

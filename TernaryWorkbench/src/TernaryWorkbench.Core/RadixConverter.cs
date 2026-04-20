@@ -28,9 +28,9 @@ public static class RadixConverter
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
-        // BCD path: handle each decimal digit individually then concatenate
-        if (options.BcdEncoding && from == Radix.Base10 && to.SupportsBcd())
-            return ConvertBcd(input, to, options);
+        // BCT path: encode balanced ternary trits as 2-bit BSD-PNX patterns
+        if (options.BctEncoding && to == Radix.Base3Balanced)
+            return ConvertBct(input, from, options);
 
         BigInteger value = Parse(input, from);
         return Format(value, to, options);
@@ -45,14 +45,19 @@ public static class RadixConverter
         input = input.Trim();
         return radix switch
         {
-            Radix.Base2Unsigned   => ParseUnsigned(input, 2),
-            Radix.Base2Signed2C   => ParseTwosComplement(input),
-            Radix.Base3Unbalanced => ParseUnsigned(input, 3),
-            Radix.Base3Balanced   => ParseBalancedTernary(input),
-            Radix.Base9Unbalanced => ParseUnsigned(input, 9),
+            Radix.Base2Unsigned    => ParseUnsigned(input, 2),
+            Radix.Base2Signed1C    => ParseBinary1C(input),
+            Radix.Base2Signed2C    => ParseTwosComplement(input),
+            Radix.Base8Unsigned    => ParseUnsigned(input, 8),
+            Radix.Base16Unsigned   => ParseHex(input),
+            Radix.Base64Rfc4648    => ParseBase64(input),
+            Radix.Base3Unbalanced  => ParseUnsigned(input, 3),
+            Radix.Base3Signed2C    => ParseTernary2C(input),
+            Radix.Base3Signed3C    => ParseTernary3C(input),
+            Radix.Base3Balanced    => ParseBalancedTernary(input),
+            Radix.Base9Unbalanced  => ParseUnsigned(input, 9),
             Radix.Base27Unbalanced => ParseBase27(input),
-            Radix.Base81Unbalanced => ParseBase81(input),
-            Radix.Base10          => ParseDecimal(input),
+            Radix.Base10           => ParseDecimal(input),
             _ => throw new NotSupportedException($"Unknown radix: {radix}")
         };
     }
@@ -66,21 +71,25 @@ public static class RadixConverter
         options ??= OutputOptions.Default;
         string result = radix switch
         {
-            Radix.Base2Unsigned   => FormatUnsigned(value, 2),
-            Radix.Base2Signed2C   => FormatTwosComplement(value),
-            Radix.Base3Unbalanced => FormatUnsigned(value, 3),
-            Radix.Base3Balanced   => FormatBalancedTernary(value),
-            Radix.Base9Unbalanced => FormatUnsigned(value, 9),
+            Radix.Base2Unsigned    => FormatUnsigned(value, 2),
+            Radix.Base2Signed1C    => FormatBinary1C(value),
+            Radix.Base2Signed2C    => FormatTwosComplement(value),
+            Radix.Base8Unsigned    => FormatUnsigned(value, 8),
+            Radix.Base16Unsigned   => FormatHex(value),
+            Radix.Base64Rfc4648    => FormatBase64(value),
+            Radix.Base3Unbalanced  => FormatUnsigned(value, 3),
+            Radix.Base3Signed2C    => FormatTernary2C(value),
+            Radix.Base3Signed3C    => FormatTernary3C(value),
+            Radix.Base3Balanced    => FormatBalancedTernary(value),
+            Radix.Base9Unbalanced  => FormatUnsigned(value, 9),
             Radix.Base27Unbalanced => FormatBase27(value),
-            Radix.Base81Unbalanced => FormatBase81(value),
-            Radix.Base10          => value.ToString(),
+            Radix.Base10           => value.ToString(),
             _ => throw new NotSupportedException($"Unknown radix: {radix}")
         };
 
         if (options.LsdFirst)
         {
             // For Base10, a leading '-' is a sign prefix, not a digit — keep it in front.
-            // For all other radices the leading character is always a digit.
             bool hasMinus = result.StartsWith('-') && radix == Radix.Base10;
             string digits = hasMinus ? result[1..] : result;
             char[] arr = digits.ToCharArray();
@@ -92,66 +101,44 @@ public static class RadixConverter
     }
 
     // -------------------------------------------------------------------------
-    // BCD encoding
+    // BCT encoding (Binary-Coded Ternary, BSD-PNX scheme)
+    // Each balanced ternary trit is encoded as 2 bits: 10=+, 01=-, 11=0, 00=illegal.
     // -------------------------------------------------------------------------
 
-    /// <summary>Encode each decimal digit of <paramref name="decInput"/> individually.</summary>
-    private static string ConvertBcd(string decInput, Radix to, OutputOptions options)
+    private static string ConvertBct(string input, Radix from, OutputOptions options)
     {
-        // Accept optional leading minus; encode absolute digits then prefix '-'
-        bool negative = decInput.StartsWith('-');
-        string digits = negative ? decInput[1..] : decInput;
+        BigInteger value = Parse(input, from);
+        // Always format balanced ternary MSD-first; LSD-first applied below on bit-pairs.
+        string bal = Format(value, Radix.Base3Balanced);
 
-        if (string.IsNullOrEmpty(digits) || !digits.All(char.IsAsciiDigit))
-            throw new FormatException($"BCD input must be a decimal string, got: '{decInput}'");
-
-        // Width per digit in the target radix
-        int digitWidth = to switch
+        var sb = new StringBuilder(bal.Length * 2);
+        foreach (char c in bal)
         {
-            Radix.Base3Unbalanced  => 3,  // each 0-9 needs up to 3 base-3 digits
-            Radix.Base9Unbalanced  => 2,  // each 0-9 needs up to 2 base-9 digits
-            Radix.Base27Unbalanced => 1,  // 0-9 fits in 1 base-27 digit
-            Radix.Base81Unbalanced => 1,  // 0-9 fits in 1 base-81 digit
-            _ => throw new NotSupportedException($"BCD not supported for {to}")
-        };
-
-        var sb = new StringBuilder();
-        if (negative) sb.Append('-');
-
-        bool lsd = options.LsdFirst;
-        if (lsd)
-        {
-            // For LSD-first we process digit positions right-to-left,
-            // and also reverse each encoded digit group
-            for (int i = digits.Length - 1; i >= 0; i--)
+            sb.Append(c switch
             {
-                int d = digits[i] - '0';
-                string encoded = FormatFixedWidth(new BigInteger(d), to, digitWidth);
-                // Reverse within this group
-                char[] group = encoded.ToCharArray();
-                Array.Reverse(group);
-                sb.Append(group);
-            }
-        }
-        else
-        {
-            foreach (char c in digits)
-            {
-                int d = c - '0';
-                string encoded = FormatFixedWidth(new BigInteger(d), to, digitWidth);
-                sb.Append(encoded);
-            }
+                '+' => "10",
+                '0' => "11",
+                '-' => "01",
+                _   => throw new FormatException($"Unexpected balanced ternary character: '{c}'")
+            });
         }
 
-        return sb.ToString();
-    }
+        string bct = sb.ToString();
 
-    /// <summary>Format <paramref name="value"/> in <paramref name="radix"/> with exactly
-    /// <paramref name="width"/> digits (zero-padded on the left).</summary>
-    private static string FormatFixedWidth(BigInteger value, Radix radix, int width)
-    {
-        string s = Format(value, radix, OutputOptions.Default);
-        return s.PadLeft(width, '0');
+        if (options.LsdFirst && bct.Length >= 2)
+        {
+            // Reverse the order of 2-bit trit encodings (keep each pair's bits intact)
+            int numPairs = bct.Length / 2;
+            char[] chars = new char[bct.Length];
+            for (int i = 0; i < numPairs; i++)
+            {
+                chars[i * 2]     = bct[(numPairs - 1 - i) * 2];
+                chars[i * 2 + 1] = bct[(numPairs - 1 - i) * 2 + 1];
+            }
+            bct = new string(chars);
+        }
+
+        return bct;
     }
 
     // -------------------------------------------------------------------------
@@ -173,6 +160,51 @@ public static class RadixConverter
         return result;
     }
 
+    private static BigInteger ParseHex(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        BigInteger result = BigInteger.Zero;
+        foreach (char c in input)
+        {
+            int digit;
+            if (c >= '0' && c <= '9')      digit = c - '0';
+            else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+            else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+            else throw new FormatException($"Invalid hexadecimal digit: '{c}'");
+            result = result * 16 + digit;
+        }
+        return result;
+    }
+
+    private static BigInteger ParseBase64(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        BigInteger result = BigInteger.Zero;
+        foreach (char c in input)
+            result = result * 64 + Symbols.ValueOf64(c);
+        return result;
+    }
+
+    /// <summary>Binary 1's complement (diminished radix complement).
+    /// Leading bit 0 = positive, 1 = negative. All-ones = −0 = 0.</summary>
+    private static BigInteger ParseBinary1C(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        foreach (char c in input)
+            if (c != '0' && c != '1')
+                throw new FormatException($"Invalid binary digit: '{c}'");
+
+        bool negative = input[0] == '1';
+        string remaining = input.Length > 1 ? input[1..] : string.Empty;
+
+        if (!negative)
+            return remaining.Length > 0 ? ParseUnsigned(remaining, 2) : BigInteger.Zero;
+
+        // Negative: flip remaining bits and negate (-0 becomes 0)
+        string flipped = FlipBits(remaining);
+        return -(flipped.Length > 0 ? ParseUnsigned(flipped, 2) : BigInteger.Zero);
+    }
+
     private static BigInteger ParseTwosComplement(string input)
     {
         if (input.Length == 0) throw new FormatException("Empty input");
@@ -183,13 +215,9 @@ public static class RadixConverter
         int L = input.Length;
 
         if (!negative)
-        {
-            // Positive: drop the leading 0 and parse as unsigned binary
             return ParseUnsigned(L == 1 ? "0" : input[1..], 2);
-        }
         else
         {
-            // Negative: value = parsed_as_unsigned - 2^L
             BigInteger raw = BigInteger.Zero;
             foreach (char c in input)
             {
@@ -198,6 +226,50 @@ public static class RadixConverter
             }
             return raw - BigInteger.Pow(2, L);
         }
+    }
+
+    /// <summary>Ternary 2's complement (diminished radix complement).
+    /// Leading trit 0 = positive, 2 = negative. All-twos = −0 = 0.</summary>
+    private static BigInteger ParseTernary2C(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        char signChar = input[0];
+        if (signChar != '0' && signChar != '2')
+            throw new FormatException(
+                $"Ternary 2\u2019s complement must start with 0 (positive) or 2 (negative), got: '{signChar}'");
+
+        foreach (char c in input)
+            if (c < '0' || c > '2')
+                throw new FormatException($"Invalid ternary digit: '{c}'");
+
+        string remaining = input.Length > 1 ? input[1..] : string.Empty;
+
+        if (signChar == '0')
+            return remaining.Length > 0 ? ParseUnsigned(remaining, 3) : BigInteger.Zero;
+
+        // Negative: flip trits (0↔2, 1→1) and negate (-0 becomes 0)
+        string flipped = FlipTrits(remaining);
+        return -(flipped.Length > 0 ? ParseUnsigned(flipped, 3) : BigInteger.Zero);
+    }
+
+    /// <summary>Ternary 3's complement (radix complement).
+    /// The sign trit s (0, 1, or 2) has weight −s·3^(n−1); remaining trits are positive.
+    /// Leading trit 0 = non-negative. Leading trit 1 or 2 = negative.</summary>
+    private static BigInteger ParseTernary3C(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        int signTrit = input[0] - '0';
+        if (signTrit < 0 || signTrit > 2)
+            throw new FormatException($"Invalid ternary digit: '{input[0]}'");
+
+        string remaining = input.Length > 1 ? input[1..] : string.Empty;
+        foreach (char c in remaining)
+            if (c < '0' || c > '2')
+                throw new FormatException($"Invalid ternary digit: '{c}'");
+
+        BigInteger rest = remaining.Length > 0 ? ParseUnsigned(remaining, 3) : BigInteger.Zero;
+        int L = remaining.Length;
+        return rest - (BigInteger)signTrit * BigInteger.Pow(3, L);
     }
 
     private static BigInteger ParseBalancedTernary(string input)
@@ -215,15 +287,6 @@ public static class RadixConverter
         BigInteger result = BigInteger.Zero;
         foreach (char c in input)
             result = result * 27 + Symbols.ValueOf27(c);
-        return result;
-    }
-
-    private static BigInteger ParseBase81(string input)
-    {
-        if (input.Length == 0) throw new FormatException("Empty input");
-        BigInteger result = BigInteger.Zero;
-        foreach (char c in input)
-            result = result * 81 + Symbols.ValueOf81(c);
         return result;
     }
 
@@ -256,26 +319,116 @@ public static class RadixConverter
         return new string(digits.ToArray());
     }
 
+    private static string FormatHex(BigInteger value)
+    {
+        if (value < 0)
+            throw new OverflowException($"Cannot format negative value {value} as hexadecimal");
+        if (value == BigInteger.Zero) return "0";
+
+        var digits = new List<char>();
+        BigInteger v = value;
+        while (v > 0)
+        {
+            int d = (int)(v % 16);
+            digits.Add(d < 10 ? (char)('0' + d) : (char)('A' + d - 10));
+            v /= 16;
+        }
+        digits.Reverse();
+        return new string(digits.ToArray());
+    }
+
+    private static string FormatBase64(BigInteger value)
+    {
+        if (value < 0)
+            throw new OverflowException($"Cannot format negative value {value} as base-64");
+        if (value == BigInteger.Zero) return "A";  // 'A' is digit 0 in RFC 4648 alphabet
+
+        var digits = new List<char>();
+        BigInteger v = value;
+        while (v > 0)
+        {
+            digits.Add(Symbols.Base64Rfc4648Alphabet[(int)(v % 64)]);
+            v /= 64;
+        }
+        digits.Reverse();
+        return new string(digits.ToArray());
+    }
+
+    /// <summary>Binary 1's complement. Positive: "0" + bits. Negative: "1" + flipped bits.</summary>
+    private static string FormatBinary1C(BigInteger value)
+    {
+        if (value == BigInteger.Zero) return "0";
+
+        if (value > 0)
+        {
+            int L = (int)value.GetBitLength();
+            string bits = FormatUnsigned(value, 2).PadLeft(L, '0');
+            return "0" + bits;
+        }
+        else
+        {
+            BigInteger absVal = BigInteger.Abs(value);
+            int L = (int)absVal.GetBitLength();
+            string bits = FormatUnsigned(absVal, 2).PadLeft(L, '0');
+            return "1" + FlipBits(bits);
+        }
+    }
+
     private static string FormatTwosComplement(BigInteger value)
     {
         if (value == BigInteger.Zero) return "0";
 
         if (value > 0)
         {
-            // Positive: prepend sign bit 0, then value in binary
-            int L = (int)BigInteger.Log(value, 2) + 1;  // bit length of value
+            int L = (int)BigInteger.Log(value, 2) + 1;
             string bits = FormatUnsigned(value, 2).PadLeft(L, '0');
             return "0" + bits;
         }
         else
         {
-            // Negative: find L such that -2^(L-1) represents this value without overflow
-            // L is the number of bits needed to represent |value| = bit-length of |value|
             BigInteger absVal = BigInteger.Abs(value);
             int L = (int)BigInteger.Log(absVal, 2) + 1;
             BigInteger rest = value + BigInteger.Pow(2, L);
             string bits = FormatUnsigned(rest, 2).PadLeft(L, '0');
             return "1" + bits;
+        }
+    }
+
+    /// <summary>Ternary 2's complement. Positive: "0" + trits. Negative: "2" + flipped trits.</summary>
+    private static string FormatTernary2C(BigInteger value)
+    {
+        if (value == BigInteger.Zero) return "0";
+
+        if (value > 0)
+            return "0" + FormatUnsigned(value, 3);
+        else
+        {
+            BigInteger absVal = BigInteger.Abs(value);
+            return "2" + FlipTrits(FormatUnsigned(absVal, 3));
+        }
+    }
+
+    /// <summary>Ternary 3's complement. Positive: "0" + trits.
+    /// Negative x: "1" + (3^L + x) formatted as L trits, where L is the
+    /// smallest integer such that 3^L ≥ |x|.</summary>
+    private static string FormatTernary3C(BigInteger value)
+    {
+        if (value == BigInteger.Zero) return "0";
+
+        if (value > 0)
+            return "0" + FormatUnsigned(value, 3);
+        else
+        {
+            BigInteger absVal = BigInteger.Abs(value);
+            // Find smallest L such that 3^L >= absVal
+            int L = 0;
+            BigInteger pow3L = BigInteger.One;
+            while (pow3L < absVal) { pow3L *= 3; L++; }
+            BigInteger rest = value + pow3L;  // = 3^L - absVal >= 0
+            string s = rest > BigInteger.Zero
+                ? FormatUnsigned(rest, 3).PadLeft(L, '0')
+                : new string('0', L);
+            return "1" + s;
         }
     }
 
@@ -288,7 +441,6 @@ public static class RadixConverter
 
         while (v != BigInteger.Zero)
         {
-            // rem ∈ {0, 1, 2}
             BigInteger rem = ((v % 3) + 3) % 3;
             if (rem == 0)
             {
@@ -327,19 +479,23 @@ public static class RadixConverter
         return new string(digits.ToArray());
     }
 
-    private static string FormatBase81(BigInteger value)
-    {
-        if (value < 0) throw new OverflowException($"Cannot format negative value {value} as base-81");
-        if (value == BigInteger.Zero) return "0";
+    // -------------------------------------------------------------------------
+    // Bit/trit flip helpers
+    // -------------------------------------------------------------------------
 
-        var digits = new List<char>();
-        BigInteger v = value;
-        while (v > 0)
-        {
-            digits.Add(Symbols.Base81Alphabet[(int)(v % 81)]);
-            v /= 81;
-        }
-        digits.Reverse();
-        return new string(digits.ToArray());
+    private static string FlipBits(string bits)
+    {
+        char[] arr = bits.ToCharArray();
+        for (int i = 0; i < arr.Length; i++)
+            arr[i] = arr[i] == '0' ? '1' : '0';
+        return new string(arr);
+    }
+
+    private static string FlipTrits(string trits)
+    {
+        char[] arr = trits.ToCharArray();
+        for (int i = 0; i < arr.Length; i++)
+            arr[i] = (char)('2' - (arr[i] - '0')); // 0→2, 1→1, 2→0
+        return new string(arr);
     }
 }

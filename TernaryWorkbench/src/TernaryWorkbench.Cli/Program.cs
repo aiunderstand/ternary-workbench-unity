@@ -3,17 +3,22 @@ using TernaryWorkbench.Core;
 // -----------------------------------------------------------------------
 // TernaryWorkbench CLI
 //
-// Usage: twb --from <radix> --to <radix> <value> [--lsd-first] [--bcd]
+// Usage: twb --from <radix> --to <radix> <value> [--lsd-first] [--bct]
 //
 // Radix aliases (case-insensitive):
 //   bin / base2           → Base2Unsigned
+//   bin1c / base2c1       → Base2Signed1C
 //   bin2c / base2c        → Base2Signed2C
-//   ter / base3           → Base3Unbalanced
+//   oct  / base8          → Base8Unsigned
+//   hex  / base16         → Base16Unsigned
+//   base64                → Base64Rfc4648
+//   ter  / base3          → Base3Unbalanced
+//   ter2c / base3c2       → Base3Signed2C
+//   ter3c / base3c3       → Base3Signed3C
 //   balanced / base3b     → Base3Balanced
 //   base9                 → Base9Unbalanced
 //   base27                → Base27Unbalanced
-//   base81                → Base81Unbalanced
-//   dec / base10          → Base10
+//   dec  / base10         → Base10
 // -----------------------------------------------------------------------
 
 if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
@@ -23,7 +28,7 @@ if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
 }
 
 Radix? fromRadix = null, toRadix = null;
-bool lsdFirst = false, bcd = false;
+bool lsdFirst = false, bct = false;
 string? value = null;
 
 for (int i = 0; i < args.Length; i++)
@@ -40,8 +45,8 @@ for (int i = 0; i < args.Length; i++)
         case "--lsd":
             lsdFirst = true;
             break;
-        case "--bcd":
-            bcd = true;
+        case "--bct":
+            bct = true;
             break;
         default:
             if (value is not null)
@@ -63,7 +68,7 @@ if (fromRadix is null || toRadix is null || value is null)
 
 try
 {
-    var opts = new OutputOptions(LsdFirst: lsdFirst, BcdEncoding: bcd);
+    var opts = new OutputOptions(LsdFirst: lsdFirst, BctEncoding: bct);
     string result = RadixConverter.Convert(value, fromRadix.Value, toRadix.Value, opts);
     Console.WriteLine(result);
     return 0;
@@ -96,12 +101,17 @@ static string NextArg(string[] args, ref int i, string flag)
 static Radix ParseRadix(string s) => s.ToLowerInvariant() switch
 {
     "bin"      or "base2"     => Radix.Base2Unsigned,
+    "bin1c"    or "base2c1"   => Radix.Base2Signed1C,
     "bin2c"    or "base2c"    => Radix.Base2Signed2C,
+    "oct"      or "base8"     => Radix.Base8Unsigned,
+    "hex"      or "base16"    => Radix.Base16Unsigned,
+    "base64"                  => Radix.Base64Rfc4648,
     "ter"      or "base3"     => Radix.Base3Unbalanced,
+    "ter2c"    or "base3c2"   => Radix.Base3Signed2C,
+    "ter3c"    or "base3c3"   => Radix.Base3Signed3C,
     "balanced" or "base3b"    => Radix.Base3Balanced,
     "base9"                   => Radix.Base9Unbalanced,
     "base27"                  => Radix.Base27Unbalanced,
-    "base81"                  => Radix.Base81Unbalanced,
     "dec"      or "base10"    => Radix.Base10,
     _ => throw new ArgumentException($"Unknown radix '{s}'. Run with --help for valid names.")
 };
@@ -117,25 +127,31 @@ static void PrintHelp()
           twb --from <radix> --to <radix> <value> [options]
 
         RADIX NAMES
-          bin / base2       Binary (unsigned)
-          bin2c / base2c    Binary (two's complement, signed)
-          ter / base3       Ternary (unbalanced)
-          balanced / base3b Balanced ternary (-, 0, +)
-          base9             Nonary (base 9, unsigned)
-          base27            Base 27 (0–9, A–Q)
-          base81            Base 81
-          dec / base10      Decimal (signed)
+          bin / base2         Binary (unsigned)
+          bin1c / base2c1     Binary (1's complement)
+          bin2c / base2c      Binary (2's complement)
+          oct / base8         Octal
+          hex / base16        Hexadecimal
+          base64              Base-64 (RFC 4648)
+          ter / base3         Ternary (unbalanced)
+          ter2c / base3c2     Ternary (2's complement)
+          ter3c / base3c3     Ternary (3's complement)
+          balanced / base3b   Ternary (balanced)
+          base9               Nonary (unbalanced)
+          base27              Heptavintimal (D.W. Jones)
+          dec / base10        Decimal (signed)
 
         OPTIONS
-          --lsd-first       Output digits from least significant to most significant
-          --bcd             BCD encoding: encode each decimal digit separately
-                            (only useful with --from dec and a base-3/9/27/81 target)
-          --help / -h       Show this help
+          --lsd-first         Output digits from least significant to most significant
+          --bct               BCT encoding (BSD-PNX: 10=+, 01=-, 11=0)
+                              Only meaningful with --to balanced
+          --help / -h         Show this help
 
         EXAMPLES
           twb --from dec --to balanced 42
           twb --from balanced --to dec "+---0"
-          twb --from dec --to base3 --bcd 42
+          twb --from dec --to balanced --bct 42
           twb --from bin --to dec 1010
+          twb --from dec --to hex 255
         """);
 }

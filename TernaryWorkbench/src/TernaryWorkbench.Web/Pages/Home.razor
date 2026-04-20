@@ -23,10 +23,21 @@
         <MudSelect T="Radix" Label="From radix" @bind-Value="_fromRadix"
                    Variant="Variant.Outlined" FullWidth="true"
                    @bind-Value:after="OnSettingChanged">
-            @foreach (Radix r in Enum.GetValues<Radix>())
-            {
-                <MudSelectItem Value="r">@r.DisplayName()</MudSelectItem>
-            }
+            <MudSelectItem Value="@Radix.Base2Unsigned">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed1C">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed2C">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base8Unsigned">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base16Unsigned">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base64Rfc4648">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
+            <MudDivider />
+            <MudSelectItem Value="@Radix.Base3Unbalanced">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
+            <MudDivider />
+            <MudSelectItem Value="@Radix.Base10">@Radix.Base10.DisplayName()</MudSelectItem>
         </MudSelect>
     </MudItem>
 
@@ -34,10 +45,21 @@
         <MudSelect T="Radix" Label="To radix" @bind-Value="_toRadix"
                    Variant="Variant.Outlined" FullWidth="true"
                    @bind-Value:after="OnSettingChanged">
-            @foreach (Radix r in Enum.GetValues<Radix>())
-            {
-                <MudSelectItem Value="r">@r.DisplayName()</MudSelectItem>
-            }
+            <MudSelectItem Value="@Radix.Base2Unsigned">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed1C">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed2C">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base8Unsigned">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base16Unsigned">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base64Rfc4648">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
+            <MudDivider />
+            <MudSelectItem Value="@Radix.Base3Unbalanced">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
+            <MudDivider />
+            <MudSelectItem Value="@Radix.Base10">@Radix.Base10.DisplayName()</MudSelectItem>
         </MudSelect>
     </MudItem>
 
@@ -50,11 +72,11 @@
     </MudItem>
 
     <MudItem xs="12" sm="6">
-        <MudTooltip Text="@(_bcdEnabled ? string.Empty : "BCD only available for decimal → base 3/9/27/81 conversions")">
-            <MudCheckBox @bind-Value="_bcdEncoding"
-                         Label="BCD encoding (encode each decimal digit separately)"
+        <MudTooltip Text="@(_bctEnabled ? string.Empty : "BCT only available when output is Ternary (balanced)")">
+            <MudCheckBox @bind-Value="_bctEncoding"
+                         Label="BCT encoding (BSD-PNX: 10=+, 01=\u2212, 11=0)"
                          Color="Color.Primary"
-                         Disabled="@(!_bcdEnabled)"
+                         Disabled="@(!_bctEnabled)"
                          @bind-Value:after="Recalculate" />
         </MudTooltip>
     </MudItem>
@@ -86,16 +108,15 @@
     private Radix _fromRadix = Radix.Base10;
     private Radix _toRadix = Radix.Base3Balanced;
     private bool _lsdFirst;
-    private bool _bcdEncoding;
+    private bool _bctEncoding;
     private string _outputValue = string.Empty;
     private string? _errorMessage;
 
-    private bool _bcdEnabled =>
-        _fromRadix == Radix.Base10 && _toRadix.SupportsBcd();
+    private bool _bctEnabled => _toRadix.SupportsBct();
 
     private void OnSettingChanged()
     {
-        if (!_bcdEnabled) _bcdEncoding = false;
+        if (!_bctEnabled) _bctEncoding = false;
         Recalculate();
     }
 
@@ -109,7 +130,7 @@
         }
         try
         {
-            var opts = new OutputOptions(LsdFirst: _lsdFirst, BcdEncoding: _bcdEncoding && _bcdEnabled);
+            var opts = new OutputOptions(LsdFirst: _lsdFirst, BctEncoding: _bctEncoding && _bctEnabled);
             _outputValue = RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
             _errorMessage = null;
         }

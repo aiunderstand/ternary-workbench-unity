@@ -2,33 +2,42 @@ namespace TernaryWorkbench.Core;
 
 public enum Radix
 {
-    Base2Unsigned,
-    Base2Signed2C,
-    Base3Unbalanced,
-    Base3Balanced,
-    Base9Unbalanced,
-    Base27Unbalanced,
-    Base81Unbalanced,
-    Base10,
+    Base2Unsigned,     // Binary (unsigned)
+    Base2Signed1C,     // Binary (1's complement)
+    Base2Signed2C,     // Binary (2's complement)
+    Base8Unsigned,     // Octal
+    Base16Unsigned,    // Hexadecimal
+    Base64Rfc4648,     // Base-64 (RFC 4648)
+    Base3Unbalanced,   // Ternary (unbalanced)
+    Base3Signed2C,     // Ternary (2's complement) — diminished radix complement
+    Base3Signed3C,     // Ternary (3's complement) — radix complement
+    Base3Balanced,     // Ternary (balanced)
+    Base9Unbalanced,   // Nonary (unbalanced)
+    Base27Unbalanced,  // Heptavintimal (D.W. Jones)
+    Base10,            // Decimal
 }
 
 public static class RadixExtensions
 {
     public static string DisplayName(this Radix r) => r switch
     {
-        Radix.Base2Unsigned   => "Binary (unsigned)",
-        Radix.Base2Signed2C   => "Binary (two's complement)",
-        Radix.Base3Unbalanced => "Ternary",
-        Radix.Base3Balanced   => "Balanced ternary",
-        Radix.Base9Unbalanced => "Nonary (base 9)",
-        Radix.Base27Unbalanced => "Base 27",
-        Radix.Base81Unbalanced => "Base 81",
-        Radix.Base10          => "Decimal",
+        Radix.Base2Unsigned    => "Binary (unsigned)",
+        Radix.Base2Signed1C    => "Binary (1\u2019s complement)",
+        Radix.Base2Signed2C    => "Binary (2\u2019s complement)",
+        Radix.Base8Unsigned    => "Octal",
+        Radix.Base16Unsigned   => "Hexadecimal",
+        Radix.Base64Rfc4648    => "Base-64 (RFC 4648)",
+        Radix.Base3Unbalanced  => "Ternary (unbalanced)",
+        Radix.Base3Signed2C    => "Ternary (2\u2019s complement)",
+        Radix.Base3Signed3C    => "Ternary (3\u2019s complement)",
+        Radix.Base3Balanced    => "Ternary (balanced)",
+        Radix.Base9Unbalanced  => "Nonary (unbalanced)",
+        Radix.Base27Unbalanced => "Heptavintimal (D.W. Jones)",
+        Radix.Base10           => "Decimal",
         _ => r.ToString()
     };
 
-    /// <summary>True for the radices where BCD output makes sense (powers of 3 targets).</summary>
-    public static bool SupportsBcd(this Radix r) => r is
-        Radix.Base3Unbalanced or Radix.Base9Unbalanced or
-        Radix.Base27Unbalanced or Radix.Base81Unbalanced;
+    /// <summary>True when BCT (Binary-Coded Ternary, BSD-PNX) output is supported.
+    /// BCT encodes each balanced ternary trit as two bits: 10=+, 01=-, 11=0.</summary>
+    public static bool SupportsBct(this Radix r) => r == Radix.Base3Balanced;
 }

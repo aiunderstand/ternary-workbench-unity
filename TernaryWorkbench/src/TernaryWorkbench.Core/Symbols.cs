@@ -8,26 +8,19 @@ public static class Symbols
     // Balanced ternary uses -, 0, + representing -1, 0, +1
     public static readonly char[] Balanced3 = { '-', '0', '+' };
 
-    // Base-27: digits 0-26 as 0-9, A-Q
+    // Base-27: digits 0-26 as 0-9, A-Q (D.W. Jones' Heptavintimal)
     public const string Base27Alphabet = "0123456789ABCDEFGHIJKLMNOPQ";
 
-    // Base-81: digits 0-80 as 0-9, A-Z, a-z, then 19 special chars
-    // Avoids + and - (used by balanced ternary), avoids / (path separator),
-    // avoids ' " ` (quoting chars), avoids @ < > \ ^ (shell/regex specials).
-    // Selected: ! # $ % & ( ) * _ ` { | } ~ [ ] ^ : ;
-    public const string Base81Alphabet =
-        "0123456789" +
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-        "abcdefghijklmnopqrstuvwxyz" +
-        "!#$%&()*_`{|}~[]^:;";
+    // Base-64 RFC 4648: A-Z, a-z, 0-9, +, /  (64 symbols, A=0 .. /=63)
+    public const string Base64Rfc4648Alphabet =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     static Symbols()
     {
-        // Validate lengths at startup
         if (Base27Alphabet.Length != 27)
             throw new InvalidOperationException($"Base27 alphabet has {Base27Alphabet.Length} chars, expected 27");
-        if (Base81Alphabet.Length != 81)
-            throw new InvalidOperationException($"Base81 alphabet has {Base81Alphabet.Length} chars, expected 81");
+        if (Base64Rfc4648Alphabet.Length != 64)
+            throw new InvalidOperationException($"Base64 RFC 4648 alphabet has {Base64Rfc4648Alphabet.Length} chars, expected 64");
     }
 
     public static int ValueOf27(char c)
@@ -37,10 +30,10 @@ public static class Symbols
         return i;
     }
 
-    public static int ValueOf81(char c)
+    public static int ValueOf64(char c)
     {
-        int i = Base81Alphabet.IndexOf(c);
-        if (i < 0) throw new FormatException($"Invalid base-81 digit: '{c}'");
+        int i = Base64Rfc4648Alphabet.IndexOf(c);
+        if (i < 0) throw new FormatException($"Invalid base-64 (RFC 4648) digit: '{c}'");
         return i;
     }
 
