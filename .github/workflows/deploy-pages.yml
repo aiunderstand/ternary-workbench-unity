@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
         run: |
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
 
-          dotnet publish TernaryWorkbench/src/TernaryWorkbench.Web/TernaryWorkbench.Web.csproj \
+          dotnet publish "$GITHUB_WORKSPACE/TernaryWorkbench/src/TernaryWorkbench.Web/TernaryWorkbench.Web.csproj" \
             --configuration Release \
             --output publish
 
