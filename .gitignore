@@ -24,6 +24,10 @@ ExportedObj/
 *.pdb
 *.opendb
 
+# OS files
+.DS_Store
+Thumbs.db
+
 # Unity3D generated meta files
 *.pidb.meta
 *.pdb.meta
