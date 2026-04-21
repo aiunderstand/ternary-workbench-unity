@@ -383,6 +383,39 @@ public class CharTStringCsvSerializerTests
     }
 
     [Fact]
+    public void SerializeDeserialize_MultiLineOutput_RoundTrips()
+    {
+        // Regression: ternary output for multi-character strings contains embedded
+        // newlines (one tryte per line).  The deserialiser must treat the entire
+        // quoted field as a single value, not split the record on each internal \n.
+        // This reproduces the exact failure reported by the user with the sample file
+        // chart_string_conversions.txt (inputs "te", "tes", "test").
+        var records = new List<CharTStringConversionRecord>
+        {
+            // "t" — single tryte, no embedded newline
+            new("t", "+++0++", "+0++-+", "UTF-8", "charT_u8", "charTC_u8"),
+            // "te" — two trytes, output spans 2 lines
+            new("te", "+++0++\n++0+-+", "+0++-+\n+00--+", "UTF-8", "charT_u8", "charTC_u8"),
+            // "tes" — three trytes, output spans 3 lines
+            new("tes", "+++0++\n++0+-+\n+++0+0", "+0++-+\n+00--+\n+0+0+0", "UTF-8", "charT_u8", "charTC_u8"),
+            // "test" — four trytes, output spans 4 lines
+            new("test", "+++0++\n++0+-+\n+++0+0\n+++0++", "+0++-+\n+00--+\n+0+0+0\n+0++-+", "UTF-8", "charT_u8", "charTC_u8"),
+        };
+
+        string csv = CharTStringCsvSerializer.Serialize(records);
+        var result = CharTStringCsvSerializer.Deserialize(csv);
+
+        result.Errors.Should().BeEmpty(
+            because: "multi-line quoted fields must not be split into separate rows");
+        result.ValidRows.Should().HaveCount(4);
+        result.ValidRows.Select(r => r.Input)
+              .Should().BeEquivalentTo(["t", "te", "tes", "test"],
+                  opts => opts.WithStrictOrdering());
+        result.ValidRows.Select(r => r.InputEncoding)
+              .Should().AllBe("UTF-8");
+    }
+
+    [Fact]
     public void SerializeDeserialize_MultiRowHistory_AllRowsPreserved()
     {
         // A realistic four-row export containing all four encoding types.

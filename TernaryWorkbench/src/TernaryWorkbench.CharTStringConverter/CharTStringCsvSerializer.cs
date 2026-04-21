@@ -14,8 +14,11 @@ namespace TernaryWorkbench.CharTStringConverter;
 ///   <item>Line ending: <c>\n</c> (CRLF accepted on input)</item>
 ///   <item>Header row (always present):
 ///         <c>input;output;output;input encoding;output encoding;output encoding</c></item>
-///   <item>Fields containing <c>;</c> or <c>"</c> are wrapped in double-quotes with
-///         internal double-quotes escaped as <c>""</c>.</item>
+///   <item>Fields containing <c>;</c>, <c>"</c>, or embedded newlines are wrapped in
+///         double-quotes with internal double-quotes escaped as <c>""</c>.</item>
+///   <item>Quoted fields may span multiple physical lines; a record ends only when
+///         the closing <c>"</c> is followed by a <c>;</c> or end-of-record
+///         (<c>\n</c> outside all quoted fields).</item>
 ///   <item>The two <c>output</c> columns and the two <c>output encoding</c> columns
 ///         may be empty when only one codec produced output.</item>
 /// </list>
@@ -71,58 +74,61 @@ public static class CharTStringCsvSerializer
     /// silently skipped.  Each unparseable row contributes an error without
     /// stopping subsequent rows.
     /// </remarks>
-    public static CharTStringCsvParseResult Deserialize(string csv)
+    public static CharTStringCsvParseResult Deserialize(string? csv)
     {
         var validRows = new List<CharTStringCsvImportRow>();
         var errors    = new List<CharTStringCsvParseError>();
 
-        var lines = csv.Replace("\r\n", "\n").Split('\n');
+        if (string.IsNullOrWhiteSpace(csv))
+            return new CharTStringCsvParseResult(validRows, errors);
 
-        int fileLineNumber = 0;
+        // Normalise line endings before record splitting.
+        string text = csv.Replace("\r\n", "\n").Replace('\r', '\n');
+
         bool headerSeen = false;
 
-        foreach (var rawLine in lines)
+        foreach (var (rawRecord, startLine) in ReadRecords(text))
         {
-            fileLineNumber++;
-
-            if (string.IsNullOrWhiteSpace(rawLine))
+            if (string.IsNullOrWhiteSpace(rawRecord))
                 continue;
 
             if (!headerSeen)
             {
-                if (!string.Equals(rawLine.Trim(), Header, StringComparison.OrdinalIgnoreCase))
+                // The header must be a plain single-line row with no quoted fields.
+                string firstLine = rawRecord.Split('\n')[0].Trim();
+                if (!string.Equals(firstLine, Header, StringComparison.OrdinalIgnoreCase))
                 {
                     errors.Add(new CharTStringCsvParseError(
-                        fileLineNumber,
-                        rawLine,
-                        $"Expected header \"{Header}\" but got \"{rawLine.Trim()}\"."));
+                        startLine,
+                        rawRecord,
+                        $"Expected header \"{Header}\" but got \"{rawRecord.Trim()}\"."));
                     return new CharTStringCsvParseResult(validRows, errors);
                 }
                 headerSeen = true;
                 continue;
             }
 
-            // Data row: expect exactly 6 semicolon-separated fields (honouring quoting).
-            var fields = SplitFields(rawLine);
+            // Parse the (possibly multi-line) record into fields.
+            var fields = SplitRecordFields(rawRecord);
             if (fields.Length != 6)
             {
                 errors.Add(new CharTStringCsvParseError(
-                    fileLineNumber,
-                    rawLine,
+                    startLine,
+                    rawRecord,
                     $"Expected 6 semicolon-separated fields, found {fields.Length}."));
                 continue;
             }
 
-            string inputField         = UnescapeField(fields[0]);
-            // fields[1] and fields[2] are output columns — ignored on import
-            string inputEncodingField = UnescapeField(fields[3]);
+            string inputField         = fields[0];
+            // fields[1] and fields[2] are output columns — ignored on import (re-run semantics)
+            string inputEncodingField = fields[3].Trim();
             // fields[4] and fields[5] are output encoding columns — ignored on import
 
             if (!ValidInputEncodings.Contains(inputEncodingField))
             {
                 errors.Add(new CharTStringCsvParseError(
-                    fileLineNumber,
-                    rawLine,
+                    startLine,
+                    rawRecord,
                     $"Column 4 (input encoding) must be one of UTF-8, ternary, charT_u8, charTC_u8; got \"{inputEncodingField}\"."));
                 continue;
             }
@@ -155,59 +161,94 @@ public static class CharTStringCsvSerializer
     }
 
     /// <summary>
-    /// Splits a single CSV line on <c>;</c> while respecting double-quoted fields.
-    /// A field that begins with <c>"</c> is read until the closing <c>"</c>,
-    /// treating <c>""</c> as an escaped quote, so embedded semicolons are preserved.
+    /// Reads logical CSV records from normalised (LF-only) text, honouring
+    /// double-quoted fields that may contain embedded newlines.  A <c>\n</c>
+    /// that appears inside a quoted field does NOT terminate the record.
     /// </summary>
-    private static string[] SplitFields(string line)
+    private static IEnumerable<(string Record, int StartLine)> ReadRecords(string text)
     {
-        var fields = new List<string>();
-        int pos = 0;
-        while (pos <= line.Length)
+        var sb = new StringBuilder();
+        bool inQuotes = false;
+        int startLine = 1;
+        int lineCount = 1;
+
+        for (int i = 0; i < text.Length; i++)
         {
-            if (pos < line.Length && line[pos] == '"')
+            char c = text[i];
+
+            if (c == '"')
             {
-                // Quoted field: read until the matching closing quote.
-                int start = pos + 1;
-                var sb = new System.Text.StringBuilder();
-                pos = start;
-                while (pos < line.Length)
+                if (inQuotes && i + 1 < text.Length && text[i + 1] == '"')
                 {
-                    if (line[pos] == '"')
-                    {
-                        if (pos + 1 < line.Length && line[pos + 1] == '"')
-                        {
-                            sb.Append('"');
-                            pos += 2;
-                        }
-                        else
-                        {
-                            pos++; // skip closing quote
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        sb.Append(line[pos++]);
-                    }
+                    // Escaped quote ("") — preserve both chars for SplitRecordFields to decode.
+                    sb.Append('"');
+                    sb.Append('"');
+                    i++;
                 }
-                fields.Add(sb.ToString());
-                // Skip the delimiter (or end-of-string)
-                if (pos < line.Length && line[pos] == ';') pos++;
+                else
+                {
+                    inQuotes = !inQuotes;
+                    sb.Append(c);
+                }
+            }
+            else if (c == '\n' && !inQuotes)
+            {
+                yield return (sb.ToString(), startLine);
+                sb.Clear();
+                lineCount++;
+                startLine = lineCount;
             }
             else
             {
-                // Unquoted field: everything up to the next ';'.
-                int semi = line.IndexOf(';', pos);
-                if (semi == -1)
-                {
-                    fields.Add(line[pos..]);
-                    break;
-                }
-                fields.Add(line[pos..semi]);
-                pos = semi + 1;
+                if (c == '\n') lineCount++; // newline inside a quoted field
+                sb.Append(c);
             }
         }
+
+        if (sb.Length > 0)
+            yield return (sb.ToString(), startLine);
+    }
+
+    /// <summary>
+    /// Splits a (possibly multi-line) CSV record on <c>;</c> delimiters,
+    /// respecting double-quoted fields (including fields with embedded newlines).
+    /// <c>""</c> sequences inside quoted fields are decoded to a single <c>"</c>.
+    /// </summary>
+    private static string[] SplitRecordFields(string record)
+    {
+        var fields = new List<string>();
+        var sb = new StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < record.Length; i++)
+        {
+            char c = record[i];
+
+            if (c == '"')
+            {
+                if (inQuotes && i + 1 < record.Length && record[i + 1] == '"')
+                {
+                    sb.Append('"');
+                    i++; // skip second quote
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                    // Structural quote — not appended.
+                }
+            }
+            else if (c == ';' && !inQuotes)
+            {
+                fields.Add(sb.ToString());
+                sb.Clear();
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+
+        fields.Add(sb.ToString()); // last field (may be empty)
         return fields.ToArray();
     }
 }
