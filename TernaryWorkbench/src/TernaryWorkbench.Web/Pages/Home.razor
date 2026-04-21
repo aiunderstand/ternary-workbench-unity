@@ -34,6 +34,7 @@
             <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3BsdPnx">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
             <MudDivider />
@@ -56,6 +57,7 @@
             <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3BsdPnx">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
             <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
             <MudDivider />
@@ -71,15 +73,36 @@
                      @bind-Value:after="Recalculate" />
     </MudItem>
 
-    <MudItem xs="12" sm="6">
-        <MudTooltip Text="@(_bctEnabled ? string.Empty : "BCT only available when output is Ternary (balanced)")">
-            <MudCheckBox @bind-Value="_bctEncoding"
-                         Label="BCT encoding (BSD-PNX: 10=+, 01=\u2212, 11=0)"
-                         Color="Color.Primary"
-                         Disabled="@(!_bctEnabled)"
-                         @bind-Value:after="Recalculate" />
-        </MudTooltip>
-    </MudItem>
+    <!-- Fixed word-length selectors (shown only when the radix supports it) -->
+    @if (_fromFixedLengthOptions.Length > 0)
+    {
+        <MudItem xs="12" sm="6">
+            <MudSelect T="int?" Label="Input word length" @bind-Value="_fixedInputLength"
+                       Variant="Variant.Outlined" FullWidth="true"
+                       @bind-Value:after="Recalculate">
+                <MudSelectItem T="int?" Value="@((int?)null)">Variable</MudSelectItem>
+                @foreach (var len in _fromFixedLengthOptions)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)len)">@len</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+
+    @if (_toFixedLengthOptions.Length > 0)
+    {
+        <MudItem xs="12" sm="6">
+            <MudSelect T="int?" Label="Output word length" @bind-Value="_fixedOutputLength"
+                       Variant="Variant.Outlined" FullWidth="true"
+                       @bind-Value:after="Recalculate">
+                <MudSelectItem T="int?" Value="@((int?)null)">Variable</MudSelectItem>
+                @foreach (var len in _toFixedLengthOptions)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)len)">@len</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
 
     <!-- Output -->
     <MudItem xs="12">
@@ -108,15 +131,21 @@
     private Radix _fromRadix = Radix.Base10;
     private Radix _toRadix = Radix.Base3Balanced;
     private bool _lsdFirst;
-    private bool _bctEncoding;
+    private int? _fixedInputLength;
+    private int? _fixedOutputLength;
     private string _outputValue = string.Empty;
     private string? _errorMessage;
 
-    private bool _bctEnabled => _toRadix.SupportsBct();
+    private int[] _fromFixedLengthOptions => _fromRadix.FixedLengthOptions();
+    private int[] _toFixedLengthOptions   => _toRadix.FixedLengthOptions();
 
     private void OnSettingChanged()
     {
-        if (!_bctEnabled) _bctEncoding = false;
+        // Reset fixed lengths that are no longer valid for the newly selected radix.
+        if (!Array.Exists(_fromFixedLengthOptions, l => l == _fixedInputLength))
+            _fixedInputLength = null;
+        if (!Array.Exists(_toFixedLengthOptions, l => l == _fixedOutputLength))
+            _fixedOutputLength = null;
         Recalculate();
     }
 
@@ -130,7 +159,10 @@
         }
         try
         {
-            var opts = new OutputOptions(LsdFirst: _lsdFirst, BctEncoding: _bctEncoding && _bctEnabled);
+            var opts = new OutputOptions(
+                LsdFirst: _lsdFirst,
+                FixedInputLength: _fixedInputLength,
+                FixedOutputLength: _fixedOutputLength);
             _outputValue = RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
             _errorMessage = null;
         }

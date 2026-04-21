@@ -28,6 +28,15 @@ public static class RadixConverter
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
+        // Validate fixed input length before parsing
+        if (options.FixedInputLength.HasValue)
+        {
+            int inputLen = from == Radix.Base3BsdPnx ? input.Length / 2 : input.Length;
+            if (inputLen > options.FixedInputLength.Value)
+                throw new OverflowException(
+                    $"Input has {inputLen} digits but the fixed word length is {options.FixedInputLength.Value}.");
+        }
+
         // BCT path: encode balanced ternary trits as 2-bit BSD-PNX patterns
         if (options.BctEncoding && to == Radix.Base3Balanced)
             return ConvertBct(input, from, options);
@@ -55,6 +64,7 @@ public static class RadixConverter
             Radix.Base3Signed2C    => ParseTernary2C(input),
             Radix.Base3Signed3C    => ParseTernary3C(input),
             Radix.Base3Balanced    => ParseBalancedTernary(input),
+            Radix.Base3BsdPnx      => ParseBsdPnx(input),
             Radix.Base9Unbalanced  => ParseUnsigned(input, 9),
             Radix.Base27Unbalanced => ParseBase27(input),
             Radix.Base10           => ParseDecimal(input),
@@ -81,20 +91,40 @@ public static class RadixConverter
             Radix.Base3Signed2C    => FormatTernary2C(value),
             Radix.Base3Signed3C    => FormatTernary3C(value),
             Radix.Base3Balanced    => FormatBalancedTernary(value),
+            Radix.Base3BsdPnx      => FormatBsdPnx(value),
             Radix.Base9Unbalanced  => FormatUnsigned(value, 9),
             Radix.Base27Unbalanced => FormatBase27(value),
             Radix.Base10           => value.ToString(),
             _ => throw new NotSupportedException($"Unknown radix: {radix}")
         };
 
+        // Apply fixed output length: overflow check then pad (before any digit-order reversal).
+        if (options.FixedOutputLength.HasValue)
+            result = ApplyFixedOutputLength(result, value, radix, options.FixedOutputLength.Value);
+
         if (options.LsdFirst)
         {
-            // For Base10, a leading '-' is a sign prefix, not a digit — keep it in front.
-            bool hasMinus = result.StartsWith('-') && radix == Radix.Base10;
-            string digits = hasMinus ? result[1..] : result;
-            char[] arr = digits.ToCharArray();
-            Array.Reverse(arr);
-            result = hasMinus ? "-" + new string(arr) : new string(arr);
+            if (radix == Radix.Base3BsdPnx)
+            {
+                // Reverse the order of 2-bit trit encodings, keeping each pair's bits intact.
+                int numPairs = result.Length / 2;
+                char[] chars = new char[result.Length];
+                for (int i = 0; i < numPairs; i++)
+                {
+                    chars[i * 2]     = result[(numPairs - 1 - i) * 2];
+                    chars[i * 2 + 1] = result[(numPairs - 1 - i) * 2 + 1];
+                }
+                result = new string(chars);
+            }
+            else
+            {
+                // For Base10, a leading '-' is a sign prefix, not a digit — keep it in front.
+                bool hasMinus = result.StartsWith('-') && radix == Radix.Base10;
+                string digits = hasMinus ? result[1..] : result;
+                char[] arr = digits.ToCharArray();
+                Array.Reverse(arr);
+                result = hasMinus ? "-" + new string(arr) : new string(arr);
+            }
         }
 
         return result;
@@ -278,6 +308,37 @@ public static class RadixConverter
         BigInteger result = BigInteger.Zero;
         foreach (char c in input)
             result = result * 3 + Symbols.ValueOfBalanced(c);
+        return result;
+    }
+
+    private static BigInteger ParseBsdPnx(string input)
+    {
+        if (input.Length == 0) throw new FormatException("Empty input");
+        if (input.Length % 2 != 0)
+            throw new FormatException(
+                $"BSD-PNX input must have an even number of characters (2 bits per trit), got {input.Length}.");
+
+        BigInteger result = BigInteger.Zero;
+        int numTrits = input.Length / 2;
+        for (int i = 0; i < numTrits; i++)
+        {
+            char hi = input[i * 2];
+            char lo = input[i * 2 + 1];
+            if ((hi != '0' && hi != '1') || (lo != '0' && lo != '1'))
+                throw new FormatException(
+                    $"Invalid BSD-PNX character at position {i * 2}: expected '0' or '1'.");
+
+            string pair = new string(new[] { hi, lo });
+            int tritValue = pair switch
+            {
+                "10" =>  1,   // +
+                "01" => -1,   // -
+                "11" =>  0,   // 0
+                "00" => throw new FormatException("Illegal BSD-PNX bit pattern '00'."),
+                _    => throw new FormatException($"Unexpected BSD-PNX pair '{pair}'.")
+            };
+            result = result * 3 + tritValue;
+        }
         return result;
     }
 
@@ -477,6 +538,96 @@ public static class RadixConverter
         }
         digits.Reverse();
         return new string(digits.ToArray());
+    }
+
+    private static string FormatBsdPnx(BigInteger value)
+    {
+        // Represent as balanced ternary, then encode each trit as a 2-bit pair.
+        string bal = FormatBalancedTernary(value);
+
+        var sb = new StringBuilder(bal.Length * 2);
+        foreach (char c in bal)
+        {
+            sb.Append(c switch
+            {
+                '+' => "10",
+                '0' => "11",
+                '-' => "01",
+                _   => throw new InvalidOperationException($"Unexpected balanced ternary character: '{c}'")
+            });
+        }
+        return sb.ToString();
+    }
+
+    // -------------------------------------------------------------------------
+    // Fixed-length padding / overflow
+    // -------------------------------------------------------------------------
+
+    /// <summary>Applies <paramref name="fixedLen"/> to <paramref name="result"/>:
+    /// throws <see cref="OverflowException"/> when the result is too long,
+    /// otherwise pads to exactly <paramref name="fixedLen"/> digits.</summary>
+    private static string ApplyFixedOutputLength(
+        string result, BigInteger value, Radix radix, int fixedLen)
+    {
+        // Determine the current "digit count" in the radix's native unit.
+        // For BSD-PNX the unit is trits (each encoded as 2 bits).
+        int currentLen = radix == Radix.Base3BsdPnx ? result.Length / 2 : result.Length;
+
+        if (currentLen > fixedLen)
+            throw new OverflowException(
+                $"Result requires {currentLen} digits but the fixed word length is {fixedLen}.");
+
+        if (currentLen == fixedLen)
+            return result;
+
+        // Pad to the target length.
+        return radix switch
+        {
+            Radix.Base3BsdPnx =>
+                // Prepend "11" pairs (zero trit) to reach fixedLen trits.
+                string.Concat(System.Linq.Enumerable.Repeat("11", fixedLen - currentLen)) + result,
+
+            Radix.Base3Signed3C =>
+                // Recompute with exactly fixedLen trits so sign placement is correct.
+                FormatTernary3CFixed(value, fixedLen),
+
+            // Signed types: sign-extend by prepending the current sign character.
+            Radix.Base2Signed1C or Radix.Base2Signed2C or Radix.Base3Signed2C =>
+                result.PadLeft(fixedLen, result[0]),
+
+            // Everything else: prepend '0'.
+            _ => result.PadLeft(fixedLen, '0')
+        };
+    }
+
+    /// <summary>Formats <paramref name="value"/> as ternary 3's complement
+    /// using exactly <paramref name="fixedLen"/> trits.</summary>
+    private static string FormatTernary3CFixed(BigInteger value, int fixedLen)
+    {
+        if (value == BigInteger.Zero)
+            return new string('0', fixedLen);
+
+        if (value > 0)
+        {
+            BigInteger maxPos = BigInteger.Pow(3, fixedLen - 1) - 1;
+            if (value > maxPos)
+                throw new OverflowException(
+                    $"Value {value} does not fit in {fixedLen}-trit 3\u2019s complement (max {maxPos}).");
+            return "0" + FormatUnsigned(value, 3).PadLeft(fixedLen - 1, '0');
+        }
+        else
+        {
+            BigInteger absVal = BigInteger.Abs(value);
+            BigInteger pow3 = BigInteger.Pow(3, fixedLen - 1);
+            if (absVal > pow3)
+                throw new OverflowException(
+                    $"Value {value} does not fit in {fixedLen}-trit 3\u2019s complement (min -{pow3}).");
+            BigInteger rest = pow3 - absVal;
+            string mag = rest > BigInteger.Zero
+                ? FormatUnsigned(rest, 3).PadLeft(fixedLen - 1, '0')
+                : new string('0', fixedLen - 1);
+            return "1" + mag;
+        }
     }
 
     // -------------------------------------------------------------------------

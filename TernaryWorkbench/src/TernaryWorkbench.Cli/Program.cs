@@ -16,6 +16,7 @@ using TernaryWorkbench.Core;
 //   ter2c / base3c2       → Base3Signed2C
 //   ter3c / base3c3       → Base3Signed3C
 //   balanced / base3b     → Base3Balanced
+//   bsdpnx / base3pnx     → Base3BsdPnx
 //   base9                 → Base9Unbalanced
 //   base27                → Base27Unbalanced
 //   dec  / base10         → Base10
@@ -110,6 +111,7 @@ static Radix ParseRadix(string s) => s.ToLowerInvariant() switch
     "ter2c"    or "base3c2"   => Radix.Base3Signed2C,
     "ter3c"    or "base3c3"   => Radix.Base3Signed3C,
     "balanced" or "base3b"    => Radix.Base3Balanced,
+    "bsdpnx"   or "base3pnx"  => Radix.Base3BsdPnx,
     "base9"                   => Radix.Base9Unbalanced,
     "base27"                  => Radix.Base27Unbalanced,
     "dec"      or "base10"    => Radix.Base10,
@@ -137,6 +139,7 @@ static void PrintHelp()
           ter2c / base3c2     Ternary (2's complement)
           ter3c / base3c3     Ternary (3's complement)
           balanced / base3b   Ternary (balanced)
+          bsdpnx / base3pnx   Ternary (BSD-PNX)
           base9               Nonary (unbalanced)
           base27              Heptavintimal (D.W. Jones)
           dec / base10        Decimal (signed)

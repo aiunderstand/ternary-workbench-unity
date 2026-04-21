@@ -12,6 +12,7 @@ public enum Radix
     Base3Signed2C,     // Ternary (2's complement) — diminished radix complement
     Base3Signed3C,     // Ternary (3's complement) — radix complement
     Base3Balanced,     // Ternary (balanced)
+    Base3BsdPnx,       // Ternary (BSD-PNX): balanced ternary encoded as 2-bit pairs (10=+, 01=-, 11=0)
     Base9Unbalanced,   // Nonary (unbalanced)
     Base27Unbalanced,  // Heptavintimal (D.W. Jones)
     Base10,            // Decimal
@@ -31,6 +32,7 @@ public static class RadixExtensions
         Radix.Base3Signed2C    => "Ternary (2\u2019s complement)",
         Radix.Base3Signed3C    => "Ternary (3\u2019s complement)",
         Radix.Base3Balanced    => "Ternary (balanced)",
+        Radix.Base3BsdPnx      => "Ternary (BSD-PNX)",
         Radix.Base9Unbalanced  => "Nonary (unbalanced)",
         Radix.Base27Unbalanced => "Heptavintimal (D.W. Jones)",
         Radix.Base10           => "Decimal",
@@ -40,4 +42,16 @@ public static class RadixExtensions
     /// <summary>True when BCT (Binary-Coded Ternary, BSD-PNX) output is supported.
     /// BCT encodes each balanced ternary trit as two bits: 10=+, 01=-, 11=0.</summary>
     public static bool SupportsBct(this Radix r) => r == Radix.Base3Balanced;
+
+    /// <summary>Returns available fixed word-length options for this radix,
+    /// or an empty array when fixed-length is not applicable.</summary>
+    public static int[] FixedLengthOptions(this Radix r) => r switch
+    {
+        Radix.Base2Unsigned or Radix.Base2Signed1C or Radix.Base2Signed2C
+            => new[] { 8, 16, 32, 64, 128 },
+        Radix.Base3Unbalanced or Radix.Base3Signed2C or Radix.Base3Signed3C
+            or Radix.Base3Balanced or Radix.Base3BsdPnx
+            => new[] { 3, 6, 9, 12, 24, 27, 48, 81 },
+        _ => Array.Empty<int>()
+    };
 }
