@@ -1,7 +1,219 @@
 @page "/chart-string-converter"
+@using TernaryWorkbench.CharTStringConverter
+@inject IJSRuntime JS
 
 <PageTitle>Ternary Workbench — charT-String Converter</PageTitle>
 
 <MudText Typo="Typo.h5" GutterBottom="true">charT-String Converter</MudText>
 
-<MudText Color="Color.Secondary">Coming soon.</MudText>
+<MudGrid Spacing="3">
+
+    <!-- Direction selector -->
+    <MudItem xs="12">
+        <MudRadioGroup T="ConversionDirection" @bind-Value="_direction" @bind-Value:after="Convert">
+            <MudRadio T="ConversionDirection" Value="ConversionDirection.Utf8ToTernary" Color="Color.Primary">
+                UTF-8 → Ternary
+            </MudRadio>
+            <MudRadio T="ConversionDirection" Value="ConversionDirection.TernaryToUtf8" Color="Color.Primary">
+                Ternary → UTF-8
+            </MudRadio>
+        </MudRadioGroup>
+    </MudItem>
+
+    <!-- Input field -->
+    <MudItem xs="12">
+        <MudTextField @bind-Value="_inputText"
+                      Label="@InputLabel"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Lines="5"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.ContentPaste"
+                      OnAdornmentClick="PasteAsync"
+                      Immediate="true"
+                      @bind-Value:after="Convert" />
+    </MudItem>
+
+    <!-- Convert button (also fires on paste/change; button is for explicit trigger) -->
+    <MudItem xs="12">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.SwapHoriz" OnClick="Convert">
+            Convert
+        </MudButton>
+    </MudItem>
+
+    <!-- Output columns: charT_u8 (left) and charTC_u8 (right) -->
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><b>charT_u8</b> — no CRC, Unicode 1:1</MudText>
+
+        @if (_u8Errors.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-2" Dense="true">
+                @foreach (var e in _u8Errors)
+                {
+                    <div>@e.Message</div>
+                }
+            </MudAlert>
+        }
+
+        <MudTextField Value="@_u8Output"
+                      Label="charT_u8 output"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Lines="5"
+                      ReadOnly="true"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                      OnAdornmentClick="@(() => CopyAsync(_u8Output))" />
+    </MudItem>
+
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><b>charTC_u8</b> — CRC, ternary-native</MudText>
+
+        @if (_ucErrors.Count > 0)
+        {
+            <MudAlert Severity="@(_ucCrcWarnings ? Severity.Warning : Severity.Error)" Class="mb-2" Dense="true">
+                @foreach (var e in _ucErrors)
+                {
+                    <div>@e.Message</div>
+                }
+            </MudAlert>
+        }
+
+        <MudTextField Value="@_ucOutput"
+                      Label="charTC_u8 output"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Lines="5"
+                      ReadOnly="true"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                      OnAdornmentClick="@(() => CopyAsync(_ucOutput))" />
+    </MudItem>
+
+    <!-- Specification panels (collapsed by default) -->
+    <MudItem xs="12">
+        <MudExpansionPanels MultiExpansion="true">
+
+            <!-- charT_u8 spec -->
+            <MudExpansionPanel Text="charT_u8 Standard Definition" Icon="@Icons.Material.Filled.Info">
+                <MudText Typo="Typo.body2" Style="white-space: pre-wrap" Class="mb-3">
+                    @CharTu8StandardTable.SpecificationText
+                </MudText>
+
+                <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">1-Tryte Code-Point Table (CP 0–125)</MudText>
+                <MudTable Items="@CharTu8StandardTable.SingleTryteTable" Dense="true" Striped="true"
+                          Bordered="true" Elevation="0" FixedHeader="true" Height="300px">
+                    <HeaderContent>
+                        <MudTh>CP</MudTh>
+                        <MudTh>Tryte</MudTh>
+                        <MudTh>Unicode</MudTh>
+                        <MudTh>Description</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.CodePoint</MudTd>
+                        <MudTd Style="font-family:monospace">@context.TrytePattern</MudTd>
+                        <MudTd>@(context.UnicodeCodePoint.HasValue ? $"U+{context.UnicodeCodePoint.Value:X4}" : "—")</MudTd>
+                        <MudTd>@context.Description</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudExpansionPanel>
+
+            <!-- charTC_u8 spec -->
+            <MudExpansionPanel Text="charTC_u8 Standard Definition" Icon="@Icons.Material.Filled.Info">
+                <MudText Typo="Typo.body2" Style="white-space: pre-wrap" Class="mb-3">
+                    @CharTCu8StandardTable.SpecificationText
+                </MudText>
+
+                <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">1-Tryte Code-Point Table (42 characters)</MudText>
+                <MudTable Items="@CharTCu8StandardTable.SingleTryteTable" Dense="true" Striped="true"
+                          Bordered="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>CP</MudTh>
+                        <MudTh>Tryte</MudTh>
+                        <MudTh>Unicode</MudTh>
+                        <MudTh>Description</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.CodePoint</MudTd>
+                        <MudTd Style="font-family:monospace">@context.TrytePattern</MudTd>
+                        <MudTd>@(context.UnicodeCodePoint.HasValue ? $"U+{context.UnicodeCodePoint.Value:X4}" : "—")</MudTd>
+                        <MudTd>@context.Description</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudExpansionPanel>
+
+        </MudExpansionPanels>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+
+    private enum ConversionDirection { Utf8ToTernary, TernaryToUtf8 }
+
+    private ConversionDirection _direction = ConversionDirection.Utf8ToTernary;
+    private string _inputText  = string.Empty;
+    private string _u8Output   = string.Empty;
+    private string _ucOutput   = string.Empty;
+
+    private IReadOnlyList<ConversionError> _u8Errors = Array.Empty<ConversionError>();
+    private IReadOnlyList<ConversionError> _ucErrors = Array.Empty<ConversionError>();
+    private bool _ucCrcWarnings;
+
+    private string InputLabel => _direction == ConversionDirection.Utf8ToTernary
+        ? "UTF-8 text input"
+        : "Ternary input (one symbol per line, trytes space-separated)";
+
+    private void Convert()
+    {
+        if (string.IsNullOrWhiteSpace(_inputText))
+        {
+            _u8Output  = string.Empty; _u8Errors  = Array.Empty<ConversionError>();
+            _ucOutput  = string.Empty; _ucErrors  = Array.Empty<ConversionError>();
+            _ucCrcWarnings = false;
+            return;
+        }
+
+        if (_direction == ConversionDirection.Utf8ToTernary)
+        {
+            var r8 = CharTu8Codec.Encode(_inputText);
+            _u8Output = r8.EncodedText;
+            _u8Errors = r8.Errors;
+
+            var rc = CharTCu8Codec.Encode(_inputText);
+            _ucOutput = rc.EncodedText;
+            _ucErrors = rc.Errors;
+            _ucCrcWarnings = false; // encode errors are hard errors
+        }
+        else
+        {
+            var r8 = CharTu8Codec.Decode(_inputText);
+            _u8Output = r8.DecodedText;
+            _u8Errors = r8.Errors;
+
+            var rc = CharTCu8Codec.Decode(_inputText);
+            _ucOutput = rc.DecodedText;
+            _ucErrors = rc.Errors;
+            // CRC errors are warnings (decoding continues); structural errors are hard
+            _ucCrcWarnings = _ucErrors.Count > 0
+                && _ucErrors.All(e => e.Message.StartsWith("CRC error"));
+        }
+    }
+
+    private async Task PasteAsync()
+    {
+        try
+        {
+            string text = await JS.InvokeAsync<string>("navigator.clipboard.readText");
+            _inputText = text;
+            Convert();
+        }
+        catch { /* clipboard access may be denied */ }
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
+        catch { }
+    }
+}
