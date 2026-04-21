@@ -51,7 +51,7 @@ public static class RadixExtensions
             => new[] { 8, 16, 32, 64, 128 },
         Radix.Base3Unbalanced or Radix.Base3Signed2C or Radix.Base3Signed3C
             or Radix.Base3Balanced or Radix.Base3BsdPnx
-            => new[] { 3, 6, 9, 12, 24, 27, 48, 81 },
+            => new[] { 3, 6, 9, 12, 24, 27, 32, 48, 81 },
         _ => Array.Empty<int>()
     };
 }

@@ -1,4 +1,5 @@
 @page "/"
+@using System.IO
 
 <PageTitle>Ternary Workbench — Radix Converter</PageTitle>
 
@@ -18,27 +19,32 @@
                       @bind-Value:after="Recalculate" />
     </MudItem>
 
-    <!-- From / To radix selectors -->
+    <!-- From / To radix selectors
+         Background colours (colorblind-safe Okabe-Ito pastels):
+           #B3D4FF  — factors of 2  (Binary, Octal, Hex, Base-64)
+           #FFE0A0  — factors of 3  (all ternary variants, Nonary, Base-27)
+           #B3EED4  — Decimal
+    -->
     <MudItem xs="12" sm="6">
         <MudSelect T="Radix" Label="From radix" @bind-Value="_fromRadix"
                    Variant="Variant.Outlined" FullWidth="true"
                    @bind-Value:after="OnSettingChanged">
-            <MudSelectItem Value="@Radix.Base2Unsigned">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base2Signed1C">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base2Signed2C">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base8Unsigned">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base16Unsigned">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base64Rfc4648">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Unsigned"   Style="background-color:#B3D4FF;">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed1C"   Style="background-color:#B3D4FF;">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed2C"   Style="background-color:#B3D4FF;">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base8Unsigned"   Style="background-color:#B3D4FF;">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base16Unsigned"  Style="background-color:#B3D4FF;">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base64Rfc4648"   Style="background-color:#B3D4FF;">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
             <MudDivider />
-            <MudSelectItem Value="@Radix.Base3Unbalanced">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3BsdPnx">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed2C"   Style="background-color:#FFE0A0;">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed3C"   Style="background-color:#FFE0A0;">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Balanced"   Style="background-color:#FFE0A0;">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3BsdPnx"     Style="background-color:#FFE0A0;">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base9Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base27Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
             <MudDivider />
-            <MudSelectItem Value="@Radix.Base10">@Radix.Base10.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base10"          Style="background-color:#B3EED4;">@Radix.Base10.DisplayName()</MudSelectItem>
         </MudSelect>
     </MudItem>
 
@@ -46,31 +52,33 @@
         <MudSelect T="Radix" Label="To radix" @bind-Value="_toRadix"
                    Variant="Variant.Outlined" FullWidth="true"
                    @bind-Value:after="OnSettingChanged">
-            <MudSelectItem Value="@Radix.Base2Unsigned">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base2Signed1C">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base2Signed2C">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base8Unsigned">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base16Unsigned">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base64Rfc4648">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Unsigned"   Style="background-color:#B3D4FF;">@Radix.Base2Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed1C"   Style="background-color:#B3D4FF;">@Radix.Base2Signed1C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base2Signed2C"   Style="background-color:#B3D4FF;">@Radix.Base2Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base8Unsigned"   Style="background-color:#B3D4FF;">@Radix.Base8Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base16Unsigned"  Style="background-color:#B3D4FF;">@Radix.Base16Unsigned.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base64Rfc4648"   Style="background-color:#B3D4FF;">@Radix.Base64Rfc4648.DisplayName()</MudSelectItem>
             <MudDivider />
-            <MudSelectItem Value="@Radix.Base3Unbalanced">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Signed2C">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Signed3C">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3Balanced">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base3BsdPnx">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base9Unbalanced">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
-            <MudSelectItem Value="@Radix.Base27Unbalanced">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base3Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed2C"   Style="background-color:#FFE0A0;">@Radix.Base3Signed2C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Signed3C"   Style="background-color:#FFE0A0;">@Radix.Base3Signed3C.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3Balanced"   Style="background-color:#FFE0A0;">@Radix.Base3Balanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base3BsdPnx"     Style="background-color:#FFE0A0;">@Radix.Base3BsdPnx.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base9Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base9Unbalanced.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base27Unbalanced" Style="background-color:#FFE0A0;">@Radix.Base27Unbalanced.DisplayName()</MudSelectItem>
             <MudDivider />
-            <MudSelectItem Value="@Radix.Base10">@Radix.Base10.DisplayName()</MudSelectItem>
+            <MudSelectItem Value="@Radix.Base10"          Style="background-color:#B3EED4;">@Radix.Base10.DisplayName()</MudSelectItem>
         </MudSelect>
     </MudItem>
 
-    <!-- Output options -->
+    <!-- Digit order dropdown: MSD is the default -->
     <MudItem xs="12" sm="6">
-        <MudCheckBox @bind-Value="_lsdFirst"
-                     Label="LSD first (least significant digit first)"
-                     Color="Color.Primary"
-                     @bind-Value:after="Recalculate" />
+        <MudSelect T="bool" Label="Digit order" @bind-Value="_lsdFirst"
+                   Variant="Variant.Outlined" FullWidth="true"
+                   @bind-Value:after="Recalculate">
+            <MudSelectItem T="bool" Value="false">MSD (most significant digit first)</MudSelectItem>
+            <MudSelectItem T="bool" Value="true">LSD (least significant digit first)</MudSelectItem>
+        </MudSelect>
     </MudItem>
 
     <!-- Fixed word-length selectors (shown only when the radix supports it) -->
@@ -122,19 +130,91 @@
                           OnAdornmentClick="CopyOutputAsync" />
         }
     </MudItem>
+
+    <!-- History actions: Download CSV + Import CSV -->
+    <MudItem xs="12">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(_history.Count == 0)"
+                       OnClick="DownloadHistoryAsync">
+                Download CSV
+            </MudButton>
+            <MudFileUpload T="IBrowserFile" FilesChanged="ImportCsvAsync" Accept=".txt,.csv">
+                <CustomContent>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Upload"
+                               OnClick="@context.OpenFilePickerAsync">
+                        Import CSV
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate />
+            </MudFileUpload>
+        </MudStack>
+    </MudItem>
+
+    <!-- Conversion history panel -->
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" GutterBottom="true">Conversion History</MudText>
+        @if (_history.Count == 0)
+        {
+            <MudText Color="Color.Secondary">No conversions yet.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@_history.AsEnumerable().Reverse()" Dense="true" Striped="true" Bordered="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Input</MudTh>
+                    <MudTh>Output</MudTh>
+                    <MudTh>From</MudTh>
+                    <MudTh>To</MudTh>
+                    <MudTh>Digit order</MudTh>
+                    <MudTh>Word length</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(_history.IndexOf(context) + 1)</MudTd>
+                    <MudTd>@context.Input</MudTd>
+                    <MudTd>@context.Output</MudTd>
+                    <MudTd>@context.FromRadix.DisplayName()</MudTd>
+                    <MudTd>@context.ToRadix.DisplayName()</MudTd>
+                    <MudTd>@(context.LsdFirst ? "LSD" : "MSD")</MudTd>
+                    <MudTd>@(context.FixedOutputLength.HasValue ? context.FixedOutputLength.ToString() : "—")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudItem>
+
+    <!-- Import error summary (shown after an import with failures) -->
+    @if (_importErrors.Count > 0)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning" ShowCloseIcon="true" CloseIconClicked="() => _importErrors.Clear()">
+                <MudText><b>@_importErrors.Count row(s) could not be imported:</b></MudText>
+                @foreach (var err in _importErrors)
+                {
+                    <MudText Typo="Typo.body2">Row @err.RowNumber: @err.Message</MudText>
+                }
+            </MudAlert>
+        </MudItem>
+    }
 </MudGrid>
 
 @code {
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private string _inputValue = string.Empty;
     private Radix _fromRadix = Radix.Base10;
     private Radix _toRadix = Radix.Base3Balanced;
-    private bool _lsdFirst;
+    private bool _lsdFirst;           // false = MSD (default), true = LSD
     private int? _fixedInputLength;
     private int? _fixedOutputLength;
     private string _outputValue = string.Empty;
     private string? _errorMessage;
+
+    private readonly List<ConversionRecord> _history = new();
+    private readonly List<CsvParseError>    _importErrors = new();
 
     private int[] _fromFixedLengthOptions => _fromRadix.FixedLengthOptions();
     private int[] _toFixedLengthOptions   => _toRadix.FixedLengthOptions();
@@ -165,6 +245,15 @@
                 FixedOutputLength: _fixedOutputLength);
             _outputValue = RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
             _errorMessage = null;
+
+            // Record this conversion in the history.
+            _history.Add(new ConversionRecord(
+                Input:             _inputValue,
+                Output:            _outputValue,
+                FromRadix:         _fromRadix,
+                ToRadix:           _toRadix,
+                LsdFirst:          _lsdFirst,
+                FixedOutputLength: _fixedOutputLength));
         }
         catch (Exception ex)
         {
@@ -187,5 +276,79 @@
     {
         if (!string.IsNullOrEmpty(_outputValue))
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", _outputValue);
+    }
+
+    /// <summary>Serialises the history to CSV and triggers a browser file download.</summary>
+    private async Task DownloadHistoryAsync()
+    {
+        string csv = ConversionCsvSerializer.Serialize(_history);
+        await JS.InvokeVoidAsync("downloadFile", "radix_conversions.txt", csv);
+    }
+
+    /// <summary>
+    /// Reads an uploaded CSV file, re-runs each conversion, appends results to the
+    /// history, and shows a summary snackbar.  Rows that fail to parse or convert are
+    /// reported in the import-error panel without stopping the remaining rows.
+    /// </summary>
+    private async Task ImportCsvAsync(IBrowserFile file)
+    {
+        _importErrors.Clear();
+
+        const long maxSizeBytes = 1 * 1024 * 1024; // 1 MB guard
+        string csv;
+        try
+        {
+            using var stream = file.OpenReadStream(maxSizeBytes);
+            using var reader = new StreamReader(stream);
+            csv = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not read file: {ex.Message}", Severity.Error);
+            return;
+        }
+
+        CsvParseResult parseResult = ConversionCsvSerializer.Deserialize(csv);
+        _importErrors.AddRange(parseResult.Errors);
+
+        int imported = 0;
+        int skipped  = parseResult.Errors.Count;
+
+        foreach (CsvImportRow row in parseResult.ValidRows)
+        {
+            try
+            {
+                var opts = new OutputOptions(
+                    LsdFirst:          row.LsdFirst,
+                    FixedOutputLength: row.FixedOutputLength);
+
+                string output = RadixConverter.Convert(row.Input, row.FromRadix, row.ToRadix, opts);
+
+                _history.Add(new ConversionRecord(
+                    Input:             row.Input,
+                    Output:            output,
+                    FromRadix:         row.FromRadix,
+                    ToRadix:           row.ToRadix,
+                    LsdFirst:          row.LsdFirst,
+                    FixedOutputLength: row.FixedOutputLength));
+
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                skipped++;
+                _importErrors.Add(new CsvParseError(
+                    RowNumber: 0,
+                    RawLine:   row.Input,
+                    Message:   $"Conversion failed for input \"{row.Input}\": {ex.Message}"));
+            }
+        }
+
+        string message = skipped > 0
+            ? $"{imported} row(s) imported, {skipped} skipped."
+            : $"{imported} row(s) imported successfully.";
+
+        Severity severity = skipped > 0 ? Severity.Warning : Severity.Success;
+        Snackbar.Add(message, severity);
     }
 }

@@ -30,6 +30,21 @@
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script>
+        // Triggers a browser file download from a string payload.
+        // Called from Blazor via IJSRuntime.InvokeVoidAsync("downloadFile", filename, content).
+        window.downloadFile = function (filename, content) {
+            var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+    </script>
 </body>
 
 </html>
