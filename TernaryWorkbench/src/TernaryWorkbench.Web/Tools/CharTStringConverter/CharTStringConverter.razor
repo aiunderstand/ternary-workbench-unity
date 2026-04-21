@@ -1,6 +1,8 @@
 @page "/chart-string-converter"
 @using TernaryWorkbench.CharTStringConverter
+@using System.IO
 @inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <PageTitle>Ternary Workbench — charT-String Converter</PageTitle>
 
@@ -10,7 +12,7 @@
 
     <!-- Direction selector -->
     <MudItem xs="12">
-        <MudRadioGroup T="ConversionDirection" @bind-Value="_direction" @bind-Value:after="Convert">
+        <MudRadioGroup T="ConversionDirection" @bind-Value="_direction" @bind-Value:after="OnDirectionChanged">
             <MudRadio T="ConversionDirection" Value="ConversionDirection.Utf8ToTernary" Color="Color.Primary">
                 UTF-8 → Ternary
             </MudRadio>
@@ -32,13 +34,6 @@
                       OnAdornmentClick="PasteAsync"
                       Immediate="true"
                       @bind-Value:after="Convert" />
-    </MudItem>
-
-    <!-- Convert button (also fires on paste/change; button is for explicit trigger) -->
-    <MudItem xs="12">
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.SwapHoriz" OnClick="Convert">
-            Convert
-        </MudButton>
     </MudItem>
 
     <!-- Output columns: charT_u8 (left) and charTC_u8 (right) -->
@@ -89,6 +84,74 @@
                       AdornmentIcon="@Icons.Material.Filled.ContentCopy"
                       OnAdornmentClick="@(() => CopyAsync(_ucOutput))" />
     </MudItem>
+
+    <!-- History actions: Download CSV + Import CSV -->
+    <MudItem xs="12">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(_history.Count == 0)"
+                       OnClick="DownloadHistoryAsync">
+                Download CSV
+            </MudButton>
+            <MudFileUpload T="IBrowserFile" FilesChanged="ImportCsvAsync" Accept=".txt,.csv">
+                <CustomContent>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Upload"
+                               OnClick="@context.OpenFilePickerAsync">
+                        Import CSV
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate />
+            </MudFileUpload>
+        </MudStack>
+    </MudItem>
+
+    <!-- Conversion history panel -->
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" GutterBottom="true">Conversion History</MudText>
+        @if (_history.Count == 0)
+        {
+            <MudText Color="Color.Secondary">No conversions yet.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@_history.AsEnumerable().Reverse()" Dense="true" Striped="true" Bordered="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Input</MudTh>
+                    <MudTh>Output 1</MudTh>
+                    <MudTh>Output 2</MudTh>
+                    <MudTh>Input Enc.</MudTh>
+                    <MudTh>Out1 Enc.</MudTh>
+                    <MudTh>Out2 Enc.</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(_history.IndexOf(context) + 1)</MudTd>
+                    <MudTd Style="font-family:monospace;max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@context.Input</MudTd>
+                    <MudTd Style="font-family:monospace;max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@context.Output1</MudTd>
+                    <MudTd Style="font-family:monospace;max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@context.Output2</MudTd>
+                    <MudTd>@context.InputEncoding</MudTd>
+                    <MudTd>@context.Output1Encoding</MudTd>
+                    <MudTd>@(string.IsNullOrEmpty(context.Output2Encoding) ? "—" : context.Output2Encoding)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudItem>
+
+    <!-- Import error summary (shown after an import with failures) -->
+    @if (_importErrors.Count > 0)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning" ShowCloseIcon="true" CloseIconClicked="() => _importErrors.Clear()">
+                <MudText><b>@_importErrors.Count row(s) could not be imported:</b></MudText>
+                @foreach (var err in _importErrors)
+                {
+                    <MudText Typo="Typo.body2">Row @err.RowNumber: @err.Message</MudText>
+                }
+            </MudAlert>
+        </MudItem>
+    }
 
     <!-- Specification panels (collapsed by default) -->
     <MudItem xs="12">
@@ -160,9 +223,22 @@
     private IReadOnlyList<ConversionError> _ucErrors = Array.Empty<ConversionError>();
     private bool _ucCrcWarnings;
 
+    private readonly List<CharTStringConversionRecord> _history      = new();
+    private readonly List<CharTStringCsvParseError>    _importErrors = new();
+
     private string InputLabel => _direction == ConversionDirection.Utf8ToTernary
         ? "UTF-8 text input"
         : "Ternary input (one symbol per line, trytes space-separated)";
+
+    private void OnDirectionChanged()
+    {
+        _inputText     = string.Empty;
+        _u8Output      = string.Empty;
+        _ucOutput      = string.Empty;
+        _u8Errors      = Array.Empty<ConversionError>();
+        _ucErrors      = Array.Empty<ConversionError>();
+        _ucCrcWarnings = false;
+    }
 
     private void Convert()
     {
@@ -184,6 +260,15 @@
             _ucOutput = rc.EncodedText;
             _ucErrors = rc.Errors;
             _ucCrcWarnings = false; // encode errors are hard errors
+
+            if (r8.Errors.Count == 0 && rc.Errors.Count == 0)
+                _history.Add(new CharTStringConversionRecord(
+                    Input:           _inputText,
+                    Output1:         _u8Output,
+                    Output2:         _ucOutput,
+                    InputEncoding:   "UTF-8",
+                    Output1Encoding: "charT_u8",
+                    Output2Encoding: "charTC_u8"));
         }
         else
         {
@@ -197,6 +282,15 @@
             // CRC errors are warnings (decoding continues); structural errors are hard
             _ucCrcWarnings = _ucErrors.Count > 0
                 && _ucErrors.All(e => e.Message.StartsWith("CRC error"));
+
+            if (r8.Errors.Count == 0 && (rc.Errors.Count == 0 || _ucCrcWarnings))
+                _history.Add(new CharTStringConversionRecord(
+                    Input:           _inputText,
+                    Output1:         _u8Output,
+                    Output2:         _ucOutput,
+                    InputEncoding:   "ternary",
+                    Output1Encoding: "UTF-8",
+                    Output2Encoding: "UTF-8"));
         }
     }
 
@@ -215,5 +309,116 @@
     {
         try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
         catch { }
+    }
+
+    private async Task DownloadHistoryAsync()
+    {
+        string csv = CharTStringCsvSerializer.Serialize(_history);
+        await JS.InvokeVoidAsync("downloadFile", "chart_string_conversions.txt", csv);
+    }
+
+    private async Task ImportCsvAsync(IBrowserFile file)
+    {
+        _importErrors.Clear();
+
+        const long maxSizeBytes = 1 * 1024 * 1024; // 1 MB guard
+        string csv;
+        try
+        {
+            using var stream = file.OpenReadStream(maxSizeBytes);
+            using var reader = new StreamReader(stream);
+            csv = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not read file: {ex.Message}", Severity.Error);
+            return;
+        }
+
+        var parseResult = CharTStringCsvSerializer.Deserialize(csv);
+        _importErrors.AddRange(parseResult.Errors);
+
+        int imported = 0;
+        int skipped  = parseResult.Errors.Count;
+
+        foreach (var row in parseResult.ValidRows)
+        {
+            try
+            {
+                CharTStringConversionRecord record = row.InputEncoding switch
+                {
+                    "UTF-8" => RunEncode(row.Input),
+                    "ternary" => RunDecodeBoth(row.Input),
+                    "charT_u8" => RunDecodeU8(row.Input),
+                    "charTC_u8" => RunDecodeUc(row.Input),
+                    _ => throw new InvalidOperationException($"Unknown input encoding: {row.InputEncoding}")
+                };
+                _history.Add(record);
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                skipped++;
+                _importErrors.Add(new CharTStringCsvParseError(
+                    RowNumber: 0,
+                    RawLine:   row.Input,
+                    Message:   $"Conversion failed for input \"{row.Input}\": {ex.Message}"));
+            }
+        }
+
+        string message = skipped > 0
+            ? $"{imported} row(s) imported, {skipped} skipped."
+            : $"{imported} row(s) imported successfully.";
+        Snackbar.Add(message, skipped > 0 ? Severity.Warning : Severity.Success);
+    }
+
+    private static CharTStringConversionRecord RunEncode(string input)
+    {
+        var r8 = CharTu8Codec.Encode(input);
+        var rc = CharTCu8Codec.Encode(input);
+        return new CharTStringConversionRecord(
+            Input:           input,
+            Output1:         r8.EncodedText,
+            Output2:         rc.EncodedText,
+            InputEncoding:   "UTF-8",
+            Output1Encoding: "charT_u8",
+            Output2Encoding: "charTC_u8");
+    }
+
+    private static CharTStringConversionRecord RunDecodeBoth(string input)
+    {
+        var r8 = CharTu8Codec.Decode(input);
+        var rc = CharTCu8Codec.Decode(input);
+        return new CharTStringConversionRecord(
+            Input:           input,
+            Output1:         r8.DecodedText,
+            Output2:         rc.DecodedText,
+            InputEncoding:   "ternary",
+            Output1Encoding: "UTF-8",
+            Output2Encoding: "UTF-8");
+    }
+
+    private static CharTStringConversionRecord RunDecodeU8(string input)
+    {
+        var r8 = CharTu8Codec.Decode(input);
+        return new CharTStringConversionRecord(
+            Input:           input,
+            Output1:         r8.DecodedText,
+            Output2:         string.Empty,
+            InputEncoding:   "charT_u8",
+            Output1Encoding: "UTF-8",
+            Output2Encoding: string.Empty);
+    }
+
+    private static CharTStringConversionRecord RunDecodeUc(string input)
+    {
+        var rc = CharTCu8Codec.Decode(input);
+        return new CharTStringConversionRecord(
+            Input:           input,
+            Output1:         rc.DecodedText,
+            Output2:         string.Empty,
+            InputEncoding:   "charTC_u8",
+            Output1Encoding: "UTF-8",
+            Output2Encoding: string.Empty);
     }
 }

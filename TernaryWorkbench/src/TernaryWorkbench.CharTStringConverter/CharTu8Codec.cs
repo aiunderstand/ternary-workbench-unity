@@ -105,7 +105,14 @@ public static class CharTu8Codec
         if (string.IsNullOrWhiteSpace(ternaryInput))
             return new DecodeResult(string.Empty, Array.Empty<ConversionError>());
 
-        var trytes = TokenizeTrytes(ternaryInput);
+        IList<Tryte> trytes;
+        try { trytes = TokenizeTrytes(ternaryInput); }
+        catch (FormatException ex)
+        {
+            return new DecodeResult(string.Empty,
+                new[] { new ConversionError(0, 0, ternaryInput, ex.Message) });
+        }
+
         var output = new StringBuilder();
         var errors = new List<ConversionError>();
         int i = 0;

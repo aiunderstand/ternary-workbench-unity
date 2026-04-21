@@ -11,16 +11,16 @@
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="TernaryWorkbench.Web.styles.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
     <script type="importmap"></script>
 </head>
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="tw-loading-container">
+            <div class="tw-spinner"></div>
+            <div class="tw-loading-label">Ternary Workbench</div>
+        </div>
     </div>
 
     <div id="blazor-error-ui">
