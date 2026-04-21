@@ -243,7 +243,7 @@
                 LsdFirst: _lsdFirst,
                 FixedInputLength: _fixedInputLength,
                 FixedOutputLength: _fixedOutputLength);
-            _outputValue = RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
+            _outputValue = TernaryWorkbench.Core.RadixConverter.Convert(_inputValue, _fromRadix, _toRadix, opts);
             _errorMessage = null;
 
             // Record this conversion in the history.
@@ -322,7 +322,7 @@
                     LsdFirst:          row.LsdFirst,
                     FixedOutputLength: row.FixedOutputLength);
 
-                string output = RadixConverter.Convert(row.Input, row.FromRadix, row.ToRadix, opts);
+                string output = TernaryWorkbench.Core.RadixConverter.Convert(row.Input, row.FromRadix, row.ToRadix, opts);
 
                 _history.Add(new ConversionRecord(
                     Input:             row.Input,

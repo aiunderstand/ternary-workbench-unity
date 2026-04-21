@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/TernaryWorkbench.CharTStringConverter/TernaryWorkbench.CharTStringConverter.csproj" />
     <Project Path="src/TernaryWorkbench.Cli/TernaryWorkbench.Cli.csproj" />
     <Project Path="src/TernaryWorkbench.Core/TernaryWorkbench.Core.csproj" />
     <Project Path="src/TernaryWorkbench.Web/TernaryWorkbench.Web.csproj" />
