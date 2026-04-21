@@ -1,0 +1,411 @@
+@page "/rebel2-assembler"
+@using TernaryWorkbench.Rebel2Assembler
+@using TernaryWorkbench.Rebel2Assembler.Assembly.Models
+@using System.IO
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<PageTitle>Ternary Workbench — REBEL-2 Assembler</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">REBEL-2 Assembler / Disassembler</MudText>
+
+<MudGrid Spacing="3">
+
+    <!-- ISA selector -->
+    <MudItem xs="12">
+        <MudRadioGroup T="string" @bind-Value="_isa">
+            <MudRadio T="string" Value="@Isa.Rebel2" Color="Color.Primary">REBEL-2</MudRadio>
+            <MudTooltip Text="REBEL-6 support is planned for a future release.">
+                <MudRadio T="string" Value="@Isa.Rebel6" Color="Color.Primary" Disabled="true">REBEL-6 (not yet implemented)</MudRadio>
+            </MudTooltip>
+        </MudRadioGroup>
+    </MudItem>
+
+    <!-- Mode selector -->
+    <MudItem xs="12">
+        <MudRadioGroup T="AssemblerMode" @bind-Value="_mode" @bind-Value:after="OnModeChanged">
+            <MudRadio T="AssemblerMode" Value="AssemblerMode.Assemble" Color="Color.Primary">Assemble</MudRadio>
+            <MudRadio T="AssemblerMode" Value="AssemblerMode.Disassemble" Color="Color.Primary">Disassemble</MudRadio>
+        </MudRadioGroup>
+    </MudItem>
+
+    <!-- Input -->
+    <MudItem xs="12">
+        <MudTextField @bind-Value="_inputText"
+                      Label="@InputLabel"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Lines="6"
+                      Immediate="false"
+                      Placeholder="@InputPlaceholder" />
+    </MudItem>
+
+    <!-- Action button -->
+    <MudItem xs="12">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="RunAsync">
+                @(_mode == AssemblerMode.Assemble ? "Assemble" : "Disassemble")
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       OnClick="ClearInput">
+                Clear
+            </MudButton>
+        </MudStack>
+    </MudItem>
+
+    <!-- Error -->
+    @if (_errorMessage is not null)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = null">
+                @_errorMessage
+            </MudAlert>
+        </MudItem>
+    }
+
+    <!-- Results table -->
+    @if (_results.Count > 0)
+    {
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6" GutterBottom="true">Result</MudText>
+            <MudTable Items="@_results" Dense="true" Striped="true" Bordered="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Address</MudTh>
+                    @if (_mode == AssemblerMode.Assemble)
+                    {
+                        <MudTh>Assembly</MudTh>
+                        <MudTh>Machine Code</MudTh>
+                    }
+                    else
+                    {
+                        <MudTh>Machine Code</MudTh>
+                        <MudTh>Assembly</MudTh>
+                    }
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd Style="font-family:monospace">@context.Address</MudTd>
+                    @if (_mode == AssemblerMode.Assemble)
+                    {
+                        <MudTd Style="font-family:monospace">@context.AssemblyText</MudTd>
+                        <MudTd Style="font-family:monospace">@context.MachineCode</MudTd>
+                    }
+                    else
+                    {
+                        <MudTd Style="font-family:monospace">@context.MachineCode</MudTd>
+                        <MudTd Style="font-family:monospace">@context.AssemblyText</MudTd>
+                    }
+                    <MudTd>
+                        <MudTooltip Text="Copy machine code">
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                           Size="Size.Small"
+                                           OnClick="@(() => CopyAsync(context.MachineCode))" />
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    }
+
+    <!-- History actions -->
+    <MudItem xs="12">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(_history.Count == 0)"
+                       OnClick="DownloadHistoryAsync">
+                Download CSV
+            </MudButton>
+            <MudFileUpload T="IBrowserFile" FilesChanged="ImportCsvAsync" Accept=".txt,.csv">
+                <CustomContent>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Upload"
+                               OnClick="@context.OpenFilePickerAsync">
+                        Import CSV
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate />
+            </MudFileUpload>
+        </MudStack>
+    </MudItem>
+
+    <!-- History table -->
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" GutterBottom="true">Conversion History</MudText>
+        @if (_history.Count == 0)
+        {
+            <MudText Color="Color.Secondary">No conversions yet.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@_history.AsEnumerable().Reverse()" Dense="true" Striped="true" Bordered="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Assembly</MudTh>
+                    <MudTh>Machine Code</MudTh>
+                    <MudTh>ISA</MudTh>
+                    <MudTh>Direction</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(_history.IndexOf(context) + 1)</MudTd>
+                    <MudTd Style="font-family:monospace">@context.Assembly</MudTd>
+                    <MudTd Style="font-family:monospace">@context.MachineCode</MudTd>
+                    <MudTd>@context.Isa</MudTd>
+                    <MudTd>@context.Direction.ToString().ToLowerInvariant()</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudItem>
+
+    <!-- Import errors -->
+    @if (_importErrors.Count > 0)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning" ShowCloseIcon="true" CloseIconClicked="() => _importErrors.Clear()">
+                <MudText><b>@_importErrors.Count row(s) could not be imported:</b></MudText>
+                @foreach (var err in _importErrors)
+                {
+                    <MudText Typo="Typo.body2">Row @err.RowNumber: @err.Message</MudText>
+                }
+            </MudAlert>
+        </MudItem>
+    }
+
+    <!-- Instruction set reference -->
+    <MudItem xs="12">
+        <MudExpansionPanels>
+            <MudExpansionPanel Text="REBEL-2 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
+                    Each 10-trit word encodes: <b>opcode</b>[0..1] <b>rs1</b>[2..3] <b>rs2/imm</b>[4..5] <b>rd1</b>[6..7] <b>rd2</b>[8..9].
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
+                    Immediates are 2-trit balanced integers in range [-4, 4].
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
+                <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference">
+                    <HeaderContent>
+                        <MudTh>Mnemonic</MudTh>
+                        <MudTh>Opcode</MudTh>
+                        <MudTh>Operands</MudTh>
+                        <MudTh>Description</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                        <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
+                        <MudTd Style="font-family:monospace">@context.Operands</MudTd>
+                        <MudTd>@context.Description</MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    <b>Comments:</b> #, ;, $, // strip to end-of-line. "quoted" strings and (parenthesised) annotations are also removed.
+                    <b>Labels</b> are resolved within a page (up to 9 instructions).
+                </MudText>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+
+    private enum AssemblerMode { Assemble, Disassemble }
+
+    // ---- UI state ----
+    private string _isa = Isa.Rebel2;
+    private AssemblerMode _mode = AssemblerMode.Assemble;
+    private string _inputText = string.Empty;
+    private string? _errorMessage;
+
+    // ---- Result rows (latest operation) ----
+    private readonly List<ResultRow> _results = new();
+    private record ResultRow(string Address, string AssemblyText, string MachineCode);
+
+    // ---- History ----
+    private readonly List<AssemblyRecord> _history = new();
+    private readonly List<TernaryWorkbench.Rebel2Assembler.CsvParseError> _importErrors = new();
+
+    private string InputLabel => _mode == AssemblerMode.Assemble
+        ? "Assembly source (1–9 instructions, one per line)"
+        : "Machine code (one 10-trit word per line)";
+
+    private string InputPlaceholder => _mode == AssemblerMode.Assemble
+        ? "ADD.T X1, X2, X3\nNOP.T\nJAL.T X0, 0"
+        : "--+-+00+00\n-000000000";
+
+    // -------------------------------------------------------------------------
+    // Event handlers
+    // -------------------------------------------------------------------------
+
+    private void OnModeChanged()
+    {
+        _inputText = string.Empty;
+        _errorMessage = null;
+        _results.Clear();
+    }
+
+    private void ClearInput()
+    {
+        _inputText = string.Empty;
+        _errorMessage = null;
+        _results.Clear();
+    }
+
+    private async Task RunAsync()
+    {
+        _errorMessage = null;
+        _results.Clear();
+
+        if (string.IsNullOrWhiteSpace(_inputText))
+            return;
+
+        if (_mode == AssemblerMode.Assemble)
+            RunAssemble();
+        else
+            RunDisassemble();
+
+        await Task.CompletedTask;
+    }
+
+    private void RunAssemble()
+    {
+        try
+        {
+            var assembled = TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.AssembleInstructions(_inputText);
+            foreach (var inst in assembled)
+            {
+                _results.Add(new ResultRow(inst.Address, inst.Assembly, inst.MachineCode));
+                _history.Add(new AssemblyRecord(inst.Assembly, inst.MachineCode, _isa, AssemblyDirection.Assemble));
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void RunDisassemble()
+    {
+        var lines = _inputText
+            .Split(["\r\n", "\n", "\r"], StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrWhiteSpace(l))
+            .ToList();
+
+        if (lines.Count == 0) return;
+
+        bool anyErrors = false;
+        var addresses = new[] { "--", "-0", "-+", "0-", "00", "0+", "+-", "+0", "++" };
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var code = lines[i];
+            var address = i < addresses.Length ? addresses[i] : $"[{i}]";
+            try
+            {
+                var mnemonic = TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.Disassemble(code);
+                _results.Add(new ResultRow(address, mnemonic, code));
+                _history.Add(new AssemblyRecord(mnemonic, code, _isa, AssemblyDirection.Disassemble));
+            }
+            catch (InvalidOperationException ex)
+            {
+                _errorMessage = (_errorMessage is null ? "" : _errorMessage + "\n")
+                    + $"{address} ({code}): {ex.Message}";
+                anyErrors = true;
+            }
+        }
+
+        if (anyErrors && _results.Count == 0)
+            _results.Clear(); // nothing succeeded
+    }
+
+    // -------------------------------------------------------------------------
+    // Copy / Download / Import
+    // -------------------------------------------------------------------------
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
+        catch { }
+    }
+
+    private async Task DownloadHistoryAsync()
+    {
+        string csv = AssemblyCsvSerializer.Serialize(_history);
+        await JS.InvokeVoidAsync("downloadFile", "rebel2_assembler_history.csv", csv);
+    }
+
+    private async Task ImportCsvAsync(IBrowserFile file)
+    {
+        _importErrors.Clear();
+
+        const long maxSizeBytes = 1 * 1024 * 1024;
+        string csv;
+        try
+        {
+            using var stream = file.OpenReadStream(maxSizeBytes);
+            using var reader = new StreamReader(stream);
+            csv = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not read file: {ex.Message}", Severity.Error);
+            return;
+        }
+
+        var (validRows, errors) = AssemblyCsvSerializer.Deserialize(csv);
+        _importErrors.AddRange(errors);
+
+        int imported = 0;
+        foreach (var row in validRows)
+        {
+            _history.Add(row);
+            imported++;
+        }
+
+        int skipped = errors.Count;
+        string message = skipped > 0
+            ? $"{imported} row(s) imported, {skipped} skipped."
+            : $"{imported} row(s) imported successfully.";
+        Snackbar.Add(message, skipped > 0 ? Severity.Warning : Severity.Success);
+    }
+
+    // -------------------------------------------------------------------------
+    // Instruction reference table data
+    // -------------------------------------------------------------------------
+
+    private record InstructionRef(string Mnemonic, string Opcode, string Operands, string Description);
+
+    private static readonly List<InstructionRef> _instructionReference =
+    [
+        new("ADD.T",   "--", "rd1, rs1, rs2",         "rd1 = rs1 + rs2"),
+        new("SUB.T",   "--", "rd1, rs1, rs2",         "rd1 = rs1 - rs2  (rd2='--)"),
+        new("STI.T",   "--", "rd1, rs2",               "rd1 = -rs2  (rd2='--')"),
+        new("ADDI.T",  "-0", "rd1, rs1, imm",          "rd1 = rs1 + imm"),
+        new("NOP.T",   "-0", "",                        "No-op (write 0 to X0)"),
+        new("LI.T",    "-0", "rd1, imm",               "rd1 = imm"),
+        new("MV.T",    "-0", "rd1, rs1",               "rd1 = rs1"),
+        new("ADDI2.T", "-+", "rd1, rd2, rs1, rs2",     "rd1 = rs1 + imm1;  rd2 = rs2 + imm2"),
+        new("MUL.T",   "0-", "rd1, rs1, rs2",          "rd1 = rs1 × rs2"),
+        new("MINW.T",  "00", "rd1, rs1, rs2",          "rd1 = min-wordwise(rs1, rs2)  (rd2='--')"),
+        new("MINT.T",  "00", "rd1, rs1, rs2",          "rd1 = min-tritwise(rs1, rs2)  (rd2='-0')"),
+        new("MAXW.T",  "00", "rd1, rs1, rs2",          "rd1 = max-wordwise(rs1, rs2)  (rd2='+-')"),
+        new("MAXT.T",  "00", "rd1, rs1, rs2",          "rd1 = max-tritwise(rs1, rs2)  (rd2='+0')"),
+        new("SLIM.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with -  (rd2='--')"),
+        new("SLIZ.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with 0  (rd2='-0')"),
+        new("SLIP.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with +  (rd2='-+')"),
+        new("SRIM.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with - (rd2='+-')"),
+        new("SRIZ.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with 0 (rd2='+0')"),
+        new("SRIP.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with + (rd2='++')"),
+        new("SC.T",    "0+", "rd1, rs1, imm",          "Cyclic shift by imm             (rd2='00')"),
+        new("CMPW.T",  "+-", "rd1, rs1, rs2",          "rd1 = wordwise compare(rs1, rs2)"),
+        new("CMPT.T",  "+-", "rd1, rs1, rs2",          "rd1 = tritwise compare(rs1, rs2)  (rd2='--')"),
+        new("BCEG.T",  "+0", "rd1, rd2, rs1, rs2",     "Branch-if-equal/greater: if rs1==rs2 goto rd1; if rs1>rs2 goto rd2"),
+        new("JAL.T",   "++", "rd1, imm",               "rd1 = PC+1; jump to PC+imm  (rd2='0+')"),
+        new("JALR.T",  "++", "rd1, rs1, imm",          "rd1 = PC+1; jump to rs1+imm"),
+        new("LPC.T",   "++", "rd1, imm",               "rd1 = PC+imm; no jump         (rd2='0-')"),
+    ];
+}

@@ -1,5 +1,6 @@
 using TernaryWorkbench.CharTStringConverter;
 using TernaryWorkbench.Core;
+using TernaryWorkbench.Rebel2Assembler;
 
 // -----------------------------------------------------------------------
 // TernaryWorkbench CLI
@@ -38,6 +39,10 @@ if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
 // charT-string converter subcommand: twb chart <subcommand> <value>
 if (args[0].Equals("chart", StringComparison.OrdinalIgnoreCase))
     return RunChart(args[1..]);
+
+// REBEL-2 assembler subcommand: twb rebel2 asm <assembly>  |  twb rebel2 dis <code...>
+if (args[0].Equals("rebel2", StringComparison.OrdinalIgnoreCase))
+    return RunRebel2(args[1..]);
 
 Radix? fromRadix = null, toRadix = null;
 bool lsdFirst = false, bct = false;
@@ -265,6 +270,120 @@ static int RunChartDetect(string ternary)
     return detected == DetectedEncoding.Unknown ? 2 : 0;
 }
 
+// -----------------------------------------------------------------------
+// REBEL-2 subcommand
+// -----------------------------------------------------------------------
+
+static int RunRebel2(string[] rebel2Args)
+{
+    if (rebel2Args.Length == 0 || rebel2Args[0].Equals("--help", StringComparison.OrdinalIgnoreCase))
+    {
+        PrintRebel2Help();
+        return 0;
+    }
+
+    string sub = rebel2Args[0].ToLowerInvariant();
+    string[] rest = rebel2Args[1..];
+
+    switch (sub)
+    {
+        case "asm":
+        case "assemble":
+        {
+            string input = rest.Length > 0 ? string.Join(" ", rest) : string.Empty;
+            if (input == "-") input = Console.In.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                Error("rebel2 asm: no assembly input provided. Pass a value or '-' to read from stdin.");
+                return 1;
+            }
+            try
+            {
+                var instructions = Rebel2Assembler.AssembleInstructions(input);
+                foreach (var inst in instructions)
+                    Console.WriteLine(inst.MachineCode);
+                return 0;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Error($"rebel2 asm: {ex.Message}");
+                return 2;
+            }
+        }
+
+        case "dis":
+        case "disassemble":
+        {
+            // Each remaining arg is a 10-trit machine code word.
+            // Also support reading one-per-line from stdin with '-'.
+            IEnumerable<string> words;
+            if (rest.Length == 1 && rest[0] == "-")
+                words = Console.In.ReadToEnd()
+                    .Split(["\r\n", "\n", "\r"], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrWhiteSpace(l));
+            else
+                words = rest;
+
+            var wordList = words.ToList();
+            if (wordList.Count == 0)
+            {
+                Error("rebel2 dis: no machine code provided. Pass 10-trit words or '-' to read from stdin.");
+                return 1;
+            }
+
+            bool anyErrors = false;
+            foreach (var word in wordList)
+            {
+                try
+                {
+                    Console.WriteLine(Rebel2Assembler.Disassemble(word));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine($"Error ({word}): {ex.Message}");
+                    anyErrors = true;
+                }
+            }
+            return anyErrors ? 2 : 0;
+        }
+
+        default:
+            Error($"Unknown rebel2 subcommand '{rebel2Args[0]}'. Run 'twb rebel2 --help' for usage.");
+            return 1;
+    }
+}
+
+static void PrintRebel2Help()
+{
+    Console.WriteLine("""
+        TernaryWorkbench CLI — REBEL-2 Assembler / Disassembler
+
+        USAGE
+          twb rebel2 asm <assembly>      Assemble one or more REBEL-2 mnemonics to 10-trit machine code
+          twb rebel2 dis <code> [code…]  Disassemble 10-trit machine code word(s) to mnemonics
+
+        INPUT
+          <assembly>  One instruction per line, up to 9 instructions (one ROM page).
+                      Labels, comments (#, ;, $, //), and annotations are supported.
+                      Pass '-' to read from stdin.
+          <code>      A 10-character string of balanced-ternary trits (+, -, 0).
+                      Pass '-' to read one code per line from stdin.
+
+        EXIT CODES
+          0  Success
+          1  Bad arguments
+          2  Assembly or disassembly error
+
+        EXAMPLES
+          twb rebel2 asm "ADD.T X1, X2, X3"
+          twb rebel2 asm "ADDI.T X1, X2, ++"
+          twb rebel2 dis --+-+00+00
+          twb rebel2 dis --+-+00+00 -0--++0000
+          printf 'ADD.T X1, X2, X3\nNOP.T\n' | twb rebel2 asm -
+        """);
+}
+
 static void PrintChartHelp()
 {
     Console.WriteLine("""
@@ -304,6 +423,7 @@ static void PrintHelp()
         SUBCOMMANDS
           (none)              Radix converter (default)
           chart               charT-string encoder/decoder/detector
+          rebel2              REBEL-2 assembler and disassembler
 
         RADIX CONVERTER USAGE
           twb --from <radix> --to <radix> <value> [options]
