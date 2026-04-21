@@ -36,6 +36,16 @@
                       @bind-Value:after="Convert" />
     </MudItem>
 
+    <!-- Detected encoding badge (Ternary → UTF-8 only) -->
+    @if (_direction == ConversionDirection.TernaryToUtf8 && !string.IsNullOrWhiteSpace(_inputText))
+    {
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2">
+                <b>Detected encoding:</b> @_detectedEncoding.ToDisplayString()
+            </MudText>
+        </MudItem>
+    }
+
     <!-- Output columns: charT_u8 (left) and charTC_u8 (right) -->
     <MudItem xs="12" sm="6">
         <MudText Typo="Typo.subtitle1" Class="mb-1"><b>charT_u8</b> — no CRC, Unicode 1:1</MudText>
@@ -43,9 +53,9 @@
         @if (_u8Errors.Count > 0)
         {
             <MudAlert Severity="Severity.Error" Class="mb-2" Dense="true">
-                @foreach (var e in _u8Errors)
+                @foreach (var (msg, count) in _u8Errors.CollapseRepeated())
                 {
-                    <div>@e.Message</div>
+                    <div>@msg@(count > 1 ? $" [×{count}]" : "")</div>
                 }
             </MudAlert>
         }
@@ -67,9 +77,9 @@
         @if (_ucErrors.Count > 0)
         {
             <MudAlert Severity="@(_ucCrcWarnings ? Severity.Warning : Severity.Error)" Class="mb-2" Dense="true">
-                @foreach (var e in _ucErrors)
+                @foreach (var (msg, count) in _ucErrors.CollapseRepeated())
                 {
-                    <div>@e.Message</div>
+                    <div>@msg@(count > 1 ? $" [×{count}]" : "")</div>
                 }
             </MudAlert>
         }
@@ -222,6 +232,7 @@
     private IReadOnlyList<ConversionError> _u8Errors = Array.Empty<ConversionError>();
     private IReadOnlyList<ConversionError> _ucErrors = Array.Empty<ConversionError>();
     private bool _ucCrcWarnings;
+    private DetectedEncoding _detectedEncoding = DetectedEncoding.Unknown;
 
     private readonly List<CharTStringConversionRecord> _history      = new();
     private readonly List<CharTStringCsvParseError>    _importErrors = new();
@@ -235,9 +246,10 @@
         _inputText     = string.Empty;
         _u8Output      = string.Empty;
         _ucOutput      = string.Empty;
-        _u8Errors      = Array.Empty<ConversionError>();
-        _ucErrors      = Array.Empty<ConversionError>();
-        _ucCrcWarnings = false;
+        _u8Errors          = Array.Empty<ConversionError>();
+        _ucErrors          = Array.Empty<ConversionError>();
+        _ucCrcWarnings     = false;
+        _detectedEncoding  = DetectedEncoding.Unknown;
     }
 
     private void Convert()
@@ -283,14 +295,16 @@
             _ucCrcWarnings = _ucErrors.Count > 0
                 && _ucErrors.All(e => e.Message.StartsWith("CRC error"));
 
-            if (r8.Errors.Count == 0 && (rc.Errors.Count == 0 || _ucCrcWarnings))
-                _history.Add(new CharTStringConversionRecord(
-                    Input:           _inputText,
-                    Output1:         _u8Output,
-                    Output2:         _ucOutput,
-                    InputEncoding:   "ternary",
-                    Output1Encoding: "UTF-8",
-                    Output2Encoding: "UTF-8"));
+            _detectedEncoding = CharTStringEncodingDetector.Detect(_inputText);
+
+            // Always record to history so partial / error results are visible
+            _history.Add(new CharTStringConversionRecord(
+                Input:           _inputText,
+                Output1:         _u8Output,
+                Output2:         _ucOutput,
+                InputEncoding:   _detectedEncoding.ToDisplayString(),
+                Output1Encoding: "UTF-8",
+                Output2Encoding: "UTF-8"));
         }
     }
 

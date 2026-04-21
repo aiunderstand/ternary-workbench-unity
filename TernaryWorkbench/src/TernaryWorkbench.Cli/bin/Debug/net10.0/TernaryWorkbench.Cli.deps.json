@@ -8,10 +8,22 @@
     ".NETCoreApp,Version=v10.0": {
       "TernaryWorkbench.Cli/1.0.0": {
         "dependencies": {
+          "TernaryWorkbench.CharTStringConverter": "1.0.0",
           "TernaryWorkbench.Core": "1.0.0"
         },
         "runtime": {
           "TernaryWorkbench.Cli.dll": {}
+        }
+      },
+      "TernaryWorkbench.CharTStringConverter/1.0.0": {
+        "dependencies": {
+          "TernaryWorkbench.Core": "1.0.0"
+        },
+        "runtime": {
+          "TernaryWorkbench.CharTStringConverter.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "TernaryWorkbench.Core/1.0.0": {
@@ -26,6 +38,11 @@
   },
   "libraries": {
     "TernaryWorkbench.Cli/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "TernaryWorkbench.CharTStringConverter/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

@@ -40,3 +40,42 @@ public sealed record EncodeResult(
 public sealed record DecodeResult(
     string                        DecodedText,
     IReadOnlyList<ConversionError> Errors);
+
+/// <summary>
+/// Extension helpers for working with <see cref="ConversionError"/> collections.
+/// </summary>
+public static class ConversionErrorExtensions
+{
+    /// <summary>
+    /// Collapses a list of errors by grouping consecutive and non-consecutive duplicates
+    /// that share the same <see cref="ConversionError.Message"/>, preserving the order
+    /// of first occurrence.  Returns a list of <c>(Message, Count)</c> tuples.
+    /// </summary>
+    /// <remarks>
+    /// Useful for long inputs where the same error (e.g. "Unknown single-tryte pattern")
+    /// would otherwise repeat once per offending symbol.
+    /// </remarks>
+    public static IReadOnlyList<(string Message, int Count)> CollapseRepeated(
+        this IEnumerable<ConversionError> errors)
+    {
+        var seen  = new Dictionary<string, int>();           // message → list index
+        var result = new List<(string Message, int Count)>();
+
+        foreach (var error in errors)
+        {
+            string msg = error.Message;
+            if (seen.TryGetValue(msg, out int idx))
+            {
+                var (m, c) = result[idx];
+                result[idx] = (m, c + 1);
+            }
+            else
+            {
+                seen[msg] = result.Count;
+                result.Add((msg, 1));
+            }
+        }
+
+        return result;
+    }
+}

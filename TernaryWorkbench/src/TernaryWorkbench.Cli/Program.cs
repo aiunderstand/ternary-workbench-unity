@@ -1,9 +1,16 @@
+using TernaryWorkbench.CharTStringConverter;
 using TernaryWorkbench.Core;
 
 // -----------------------------------------------------------------------
 // TernaryWorkbench CLI
 //
-// Usage: twb --from <radix> --to <radix> <value> [--lsd-first] [--bct]
+// Usage:
+//   twb --from <radix> --to <radix> <value> [--lsd-first] [--bct]
+//   twb chart encode <text>
+//   twb chart decode <ternary>
+//   twb chart decode-u8 <ternary>
+//   twb chart decode-tc <ternary>
+//   twb chart detect <ternary>
 //
 // Radix aliases (case-insensitive):
 //   bin / base2           → Base2Unsigned
@@ -27,6 +34,10 @@ if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
     PrintHelp();
     return 0;
 }
+
+// charT-string converter subcommand: twb chart <subcommand> <value>
+if (args[0].Equals("chart", StringComparison.OrdinalIgnoreCase))
+    return RunChart(args[1..]);
 
 Radix? fromRadix = null, toRadix = null;
 bool lsdFirst = false, bct = false;
@@ -120,12 +131,181 @@ static Radix ParseRadix(string s) => s.ToLowerInvariant() switch
 
 static void Error(string msg) => Console.Error.WriteLine($"Error: {msg}");
 
+// -----------------------------------------------------------------------
+// charT-string subcommand
+// -----------------------------------------------------------------------
+
+static int RunChart(string[] chartArgs)
+{
+    if (chartArgs.Length == 0 || chartArgs[0].Equals("--help", StringComparison.OrdinalIgnoreCase))
+    {
+        PrintChartHelp();
+        return 0;
+    }
+
+    string subcommand = chartArgs[0].ToLowerInvariant();
+
+    // Remaining arguments after the subcommand word
+    string[] rest = chartArgs[1..];
+    string? input = rest.Length > 0 ? string.Join(" ", rest) : null;
+
+    // Allow reading ternary/text from stdin with "-"
+    if (input == "-")
+        input = Console.In.ReadToEnd();
+
+    if (string.IsNullOrWhiteSpace(input))
+    {
+        Error($"chart {subcommand}: no input provided. Pass a value or '-' to read from stdin.");
+        return 1;
+    }
+
+    switch (subcommand)
+    {
+        case "encode":
+            return RunChartEncode(input);
+
+        case "decode":
+            return RunChartDecode(input);
+
+        case "decode-u8":
+            return RunChartDecodeU8(input);
+
+        case "decode-tc":
+            return RunChartDecodeTc(input);
+
+        case "detect":
+            return RunChartDetect(input);
+
+        default:
+            Error($"Unknown chart subcommand '{chartArgs[0]}'. Run 'twb chart --help' for usage.");
+            return 1;
+    }
+}
+
+static int RunChartEncode(string utf8Text)
+{
+    bool anyErrors = false;
+
+    var r8 = CharTu8Codec.Encode(utf8Text);
+    Console.WriteLine("=== charT_u8 ===");
+    Console.WriteLine(r8.EncodedText);
+    if (r8.Errors.Count > 0)
+    {
+        anyErrors = true;
+        foreach (var (msg, count) in r8.Errors.CollapseRepeated())
+            Console.Error.WriteLine($"  charT_u8 error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    }
+
+    Console.WriteLine();
+
+    var rc = CharTCu8Codec.Encode(utf8Text);
+    Console.WriteLine("=== charTC_u8 ===");
+    Console.WriteLine(rc.EncodedText);
+    if (rc.Errors.Count > 0)
+    {
+        anyErrors = true;
+        foreach (var (msg, count) in rc.Errors.CollapseRepeated())
+            Console.Error.WriteLine($"  charTC_u8 error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    }
+
+    return anyErrors ? 2 : 0;
+}
+
+static int RunChartDecode(string ternary)
+{
+    bool anyErrors = false;
+
+    var r8 = CharTu8Codec.Decode(ternary);
+    Console.WriteLine("=== charT_u8 ===");
+    Console.WriteLine(r8.DecodedText);
+    if (r8.Errors.Count > 0)
+    {
+        anyErrors = true;
+        foreach (var (msg, count) in r8.Errors.CollapseRepeated())
+            Console.Error.WriteLine($"  charT_u8 error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    }
+
+    Console.WriteLine();
+
+    var rc = CharTCu8Codec.Decode(ternary);
+    Console.WriteLine("=== charTC_u8 ===");
+    Console.WriteLine(rc.DecodedText);
+    if (rc.Errors.Count > 0)
+    {
+        anyErrors = true;
+        foreach (var (msg, count) in rc.Errors.CollapseRepeated())
+            Console.Error.WriteLine($"  charTC_u8 error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    }
+
+    return anyErrors ? 2 : 0;
+}
+
+static int RunChartDecodeU8(string ternary)
+{
+    var r8 = CharTu8Codec.Decode(ternary);
+    Console.WriteLine(r8.DecodedText);
+    foreach (var (msg, count) in r8.Errors.CollapseRepeated())
+        Console.Error.WriteLine($"Error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    return r8.Errors.Count > 0 ? 2 : 0;
+}
+
+static int RunChartDecodeTc(string ternary)
+{
+    var rc = CharTCu8Codec.Decode(ternary);
+    Console.WriteLine(rc.DecodedText);
+    foreach (var (msg, count) in rc.Errors.CollapseRepeated())
+        Console.Error.WriteLine($"Error: {msg}{(count > 1 ? $" [×{count}]" : "")}");
+    return rc.Errors.Count > 0 ? 2 : 0;
+}
+
+static int RunChartDetect(string ternary)
+{
+    var detected = CharTStringEncodingDetector.Detect(ternary);
+    Console.WriteLine(detected.ToDisplayString());
+    return detected == DetectedEncoding.Unknown ? 2 : 0;
+}
+
+static void PrintChartHelp()
+{
+    Console.WriteLine("""
+        TernaryWorkbench CLI — charT-string converter
+
+        USAGE
+          twb chart encode   <text>    Encode UTF-8 text to both charT_u8 and charTC_u8
+          twb chart decode   <ternary> Decode ternary with both charT_u8 and charTC_u8
+          twb chart decode-u8 <ternary> Decode ternary with charT_u8 only
+          twb chart decode-tc <ternary> Decode ternary with charTC_u8 only
+          twb chart detect   <ternary> Detect which charT encoding the ternary uses
+
+        INPUT
+          <ternary>   Space- or newline-separated trytes (6 trits each from {-,0,+}).
+                      Symbols may also be separated by '|'.
+                      Pass '-' to read from stdin.
+
+        EXIT CODES
+          0  Success (no errors)
+          1  Bad arguments
+          2  Conversion error(s)
+
+        EXAMPLES
+          twb chart encode "Hello"
+          twb chart decode "+----+ -0--0-"
+          twb chart decode-tc "+----+ -0--0- +000-0"
+          twb chart detect "+----+ -0--0-"
+          echo "+----+" | twb chart decode-tc -
+        """);
+}
+
 static void PrintHelp()
 {
     Console.WriteLine("""
-        TernaryWorkbench CLI — radix converter
+        TernaryWorkbench CLI
 
-        USAGE
+        SUBCOMMANDS
+          (none)              Radix converter (default)
+          chart               charT-string encoder/decoder/detector
+
+        RADIX CONVERTER USAGE
           twb --from <radix> --to <radix> <value> [options]
 
         RADIX NAMES
@@ -156,5 +336,7 @@ static void PrintHelp()
           twb --from dec --to balanced --bct 42
           twb --from bin --to dec 1010
           twb --from dec --to hex 255
+
+        For charT-string converter help: twb chart --help
         """);
 }

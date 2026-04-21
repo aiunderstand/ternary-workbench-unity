@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TernaryWorkbench.Core\TernaryWorkbench.Core.csproj" />
+    <ProjectReference Include="..\TernaryWorkbench.CharTStringConverter\TernaryWorkbench.CharTStringConverter.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
