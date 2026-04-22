@@ -1,0 +1,153 @@
+@page "/mrcs-studio"
+
+<PageTitle>Ternary Workbench — MRCS Studio</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">MRCS Studio</MudText>
+
+<MudText Typo="Typo.body1" Class="mb-4">
+    Click the image below to open MRCS Studio in a new tab.
+</MudText>
+
+<MudLink Href="https://mrcs-studio-g8brc3eth8f9hfgv.norwayeast-01.azurewebsites.net/" Target="_blank" Underline="Underline.None">
+    <MudPaper Outlined="true" Class="pa-1 mb-1" Style="display:inline-block; cursor:pointer;">
+        <img src="mrcs-studio-example.png"
+             alt="MRCS Studio — ternary circuit schematic editor"
+             style="max-width:100%; height:auto; display:block;" />
+    </MudPaper>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+        MRCS Studio Schematic — ternary circuit schematic editor showing a REBEL-2 balanced ternary CPU
+    </MudText>
+</MudLink>
+
+<MudDivider Class="my-4" />
+
+<MudText Typo="Typo.h6" GutterBottom="true">What is MRCS Studio?</MudText>
+<MudText Typo="Typo.body1" Class="mb-3">
+    MRCS Studio is the successor to Mixed Radix Circuit Synthesizer (MRCS), the first browser-based Electronic Design
+    Automation (EDA) tool to design and verify binary, ternary and hybrid (mixed radix) circuits. It was launched and
+    presented at IEEE ISCAS 2022 as part of the PhD project of Steven Bos. Where conventional EDA tools assume binary
+    almost everywhere, MRCS treats radix as a first-class design parameter. MRCS featured a novel MVL circuit synthesis
+    algorithm with HSPICE and Verilog output targeting binary-coded ternary CMOS and multi-threshold CNTFET. The tool
+    was used to design REBEL-2, a novel balanced ternary CPU with RISC-V-like ISA. Several MRCS designs have been
+    successfully tested on a FPGA and verified on silicon using the Openlane ASIC workflow and TinyTapeout services.
+</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">
+    MRCS Studio is built from the ground up for <b>mixed-radix and ternary digital logic design and verification at
+    Very Large Scale Integration (VLSI)</b>. It addresses several of the documented shortcomings of MRCS that prevented
+    designs from scaling beyond 10,000 transistors (VLSI). MRCS Studio is part of the <b>open ternary technology
+    stack</b> designed by Dr. Steven Bos, Dr. Henning Gundersen and the members of the Ternary Research Group at the
+    University of South-Eastern Norway. MRCS Studio runs in the browser with no installation required, and is also
+    available as a desktop application for power users.
+</MudText>
+
+<MudDivider Class="my-4" />
+
+<MudText Typo="Typo.h6" GutterBottom="true">Features</MudText>
+
+<MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Schematic Editor</MudText>
+<MudList T="string" Dense="true">
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Native ternary primitives.</b> Gates, wires, tri-state buffers and buses built for three-valued logic; no binary-to-ternary workarounds.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Visual circuit editor with drag-and-drop components.</b> Design and explore circuits at the logic gate level.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>C# Circuits.</b> [Power users] Design and explore circuits programmatically.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Command line interface (CLI).</b> [Power users] Operate MRCS Studio headless.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Ternary/mixed radix VLSI gate-level simulation.</b> Propagate trit values through the schematic in real-time using the SONIC engine.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Verilog and SPICE synthesis.</b> Export automated binary-coded ternary CMOS flows to FPGAs and ASICs or native ternary with emerging devices like CNTFETs to HSPICE.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Mixed-radix netlists.</b> Connect components of different radices within a single schematic.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Hierarchical design.</b> Compose subcircuits at any level of abstraction using reusable subcircuits.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Multi-trit bus wiring.</b> Multi-trit buses with distinct visual styling.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Design rule checking (DRC).</b> Improve circuit feasibility using three-level reporting (error, warning, info).
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Standardized ternary library.</b> A collection of 56 standard cells and 66 subcircuits to kick-start any ternary design.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Cell / subcircuit search and filter.</b> Search the cell library by type, radix, or name.
+    </MudListItem>
+    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+        <b>Quality-of-life features.</b> Minimap, zoom controls, dark/light/custom color schemes, keyboard shortcuts, tutorials, auto save and more.
+    </MudListItem>
+</MudList>
+
+<MudDivider Class="my-4" />
+
+<MudExpansionPanels Class="mb-4">
+    <MudExpansionPanel Text="Changelog — March 2026" Icon="@Icons.Material.Filled.History">
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Bus System</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added bus titles for better identification</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added menu to select which port in a bus port to connect to gate pins</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Allow buses to cross with DRC warning</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added highlight of internal wires a bus wire connects to</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added dashed selection border around marked buses</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added border and end indicators to buses</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added red highlight and prohibitive cursor for invalid bus intersections</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Improved bus width label positioning for vertical buses</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Retain bus connection positions on bus resize</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Increased maximum bus width to 64, added shift-click to increase by 8</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added shift-click range selection and ctrl multi-select in bus menu</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Fixed bus port merging issues and drawing edge cases</MudListItem>
+        </MudList>
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Canvas &amp; Interaction</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added keystroke shortcuts for wire drawing (right-click removes last anchor)</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added drag preview of basic components reflecting actual SVGs</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Lock move cursor while moving components</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Disabled context menu on right-click drag for canvas panning</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added default browser back/forward navigation for subcircuit levels</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Save positional data to the browser for all subcircuit levels</MudListItem>
+        </MudList>
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Design Rule Checks (DRC)</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Moved DRC checks to dedicated namespace</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Updated DRC to check affected paths only (performance improvement)</MudListItem>
+        </MudList>
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">UI &amp; Display</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Revamped the About page</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Improved subcircuit title formatting and split titles with filter cell text</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Updated undriven port coloring on subcircuit components</MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Added input length limits and adjusted bus port bracket positions</MudListItem>
+        </MudList>
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Internal</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Moved computed properties in domain models to extension members</MudListItem>
+        </MudList>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+<MudDivider Class="my-4" />
+
+<MudText Typo="Typo.h6" GutterBottom="true">Contributors</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">
+    Steven Bos, Sondre Bitubekk, Ole Christian Moholth, Halvor Nybø Risto, Henning Gundersen, Vetle Bodahl, Erika Fegri, Anders Minde
+</MudText>
+
+<MudDivider Class="my-4" />
+
+<MudText Typo="Typo.h6" GutterBottom="true">Links</MudText>
+<MudStack Spacing="1" Class="mb-2">
+    <MudLink Href="https://github.com/aiunderstand/MRCS-Studio" Target="_blank">MRCS Studio GitHub Repository</MudLink>
+    <MudLink Href="https://github.com/aiunderstand/MixedRadixCircuitSynthesis" Target="_blank">MRCS GitHub Repository</MudLink>
+    <MudLink Href="https://nva.sikt.no/registration/0198cc7cede6-140f18d6-f79f-4020-a9cd-8c93850273cb" Target="_blank">MRCS Paper</MudLink>
+    <MudLink Href="https://nva.sikt.no/registration/01991379db36-bdd54c2b-e4ec-4e60-8854-030cb3f08217" Target="_blank">MRCS Chapter</MudLink>
+    <MudLink Href="https://www.usn.no/english/research/our-research-centres-and-groups/technology/ternary-research/" Target="_blank">USN Ternary Research Group Website</MudLink>
+</MudStack>
