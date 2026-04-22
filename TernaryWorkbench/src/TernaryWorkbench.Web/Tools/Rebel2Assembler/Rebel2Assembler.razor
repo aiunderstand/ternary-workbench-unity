@@ -179,24 +179,50 @@
             <MudExpansionPanel Text="REBEL-2 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
                 <MudText Typo="Typo.body2" Class="mb-2">
                     Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
-                    Each 10-trit word encodes: <b>opcode</b>[0..1] <b>rs1</b>[2..3] <b>rs2/imm</b>[4..5] <b>rd1</b>[6..7] <b>rd2</b>[8..9].
+                    Each 10-trit word is split into five 2-trit fields.
                 </MudText>
+
+                <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
+                <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference" Class="mb-3">
+                    <HeaderContent>
+                        <MudTh>Format</MudTh>
+                        <MudTh>Trits [1:0]</MudTh>
+                        <MudTh>Trits [3:2]</MudTh>
+                        <MudTh>Trits [5:4]</MudTh>
+                        <MudTh>Trits [7:6]</MudTh>
+                        <MudTh>Trits [9:8]</MudTh>
+                        <MudTh>Examples</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><b>@context.Name</b></MudTd>
+                        <MudTd Style="font-family:monospace">op</MudTd>
+                        <MudTd Style="font-family:monospace">rs1</MudTd>
+                        <MudTd Style="font-family:monospace">@context.Field54</MudTd>
+                        <MudTd Style="font-family:monospace">rd1</MudTd>
+                        <MudTd Style="font-family:monospace">@context.Field98</MudTd>
+                        <MudTd>@context.Examples</MudTd>
+                    </RowTemplate>
+                </MudTable>
+
                 <MudText Typo="Typo.body2" Class="mb-2">
                     <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
                     Immediates are 2-trit balanced integers in range [-4, 4].
                 </MudText>
+
                 <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
                 <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference">
                     <HeaderContent>
                         <MudTh>Mnemonic</MudTh>
                         <MudTh>Opcode</MudTh>
                         <MudTh>Operands</MudTh>
+                        <MudTh>Func / Rd2</MudTh>
                         <MudTh>Description</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
                         <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
                         <MudTd Style="font-family:monospace">@context.Operands</MudTd>
+                        <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
                         <MudTd>@context.Description</MudTd>
                     </RowTemplate>
                 </MudTable>
@@ -377,35 +403,43 @@
     // Instruction reference table data
     // -------------------------------------------------------------------------
 
-    private record InstructionRef(string Mnemonic, string Opcode, string Operands, string Description);
+    private record FormatRef(string Name, string Field54, string Field98, string Examples);
+    private record InstructionRef(string Mnemonic, string Opcode, string Operands, string FuncRd2, string Description);
+
+    private static readonly List<FormatRef> _formatReference =
+    [
+        new("R",  "rs2", "func", "ADD.T, MUL.T, CMP*.T — register × register, func selects variant"),
+        new("I",  "imm", "func", "ADDI.T, SL*.T, SR*.T, SC.T, JAL.T, JALR.T — immediate operand, func selects variant"),
+        new("D",  "rs2", "rd2",  "ADDI2.T, BCEG.T — both rd1 and rd2 are explicit destination registers"),
+    ];
 
     private static readonly List<InstructionRef> _instructionReference =
     [
-        new("ADD.T",   "--", "rd1, rs1, rs2",         "rd1 = rs1 + rs2"),
-        new("SUB.T",   "--", "rd1, rs1, rs2",         "rd1 = rs1 - rs2  (rd2='--)"),
-        new("STI.T",   "--", "rd1, rs2",               "rd1 = -rs2  (rd2='--')"),
-        new("ADDI.T",  "-0", "rd1, rs1, imm",          "rd1 = rs1 + imm"),
-        new("NOP.T",   "-0", "",                        "No-op (write 0 to X0)"),
-        new("LI.T",    "-0", "rd1, imm",               "rd1 = imm"),
-        new("MV.T",    "-0", "rd1, rs1",               "rd1 = rs1"),
-        new("ADDI2.T", "-+", "rd1, rd2, rs1, rs2",     "rd1 = rs1 + imm1;  rd2 = rs2 + imm2"),
-        new("MUL.T",   "0-", "rd1, rs1, rs2",          "rd1 = rs1 × rs2"),
-        new("MINW.T",  "00", "rd1, rs1, rs2",          "rd1 = min-wordwise(rs1, rs2)  (rd2='--')"),
-        new("MINT.T",  "00", "rd1, rs1, rs2",          "rd1 = min-tritwise(rs1, rs2)  (rd2='-0')"),
-        new("MAXW.T",  "00", "rd1, rs1, rs2",          "rd1 = max-wordwise(rs1, rs2)  (rd2='+-')"),
-        new("MAXT.T",  "00", "rd1, rs1, rs2",          "rd1 = max-tritwise(rs1, rs2)  (rd2='+0')"),
-        new("SLIM.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with -  (rd2='--')"),
-        new("SLIZ.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with 0  (rd2='-0')"),
-        new("SLIP.T",  "0+", "rd1, rs1, imm",          "Shift left by imm, fill with +  (rd2='-+')"),
-        new("SRIM.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with - (rd2='+-')"),
-        new("SRIZ.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with 0 (rd2='+0')"),
-        new("SRIP.T",  "0+", "rd1, rs1, imm",          "Shift right by imm, fill with + (rd2='++')"),
-        new("SC.T",    "0+", "rd1, rs1, imm",          "Cyclic shift by imm             (rd2='00')"),
-        new("CMPW.T",  "+-", "rd1, rs1, rs2",          "rd1 = wordwise compare(rs1, rs2)"),
-        new("CMPT.T",  "+-", "rd1, rs1, rs2",          "rd1 = tritwise compare(rs1, rs2)  (rd2='--')"),
-        new("BCEG.T",  "+0", "rd1, rd2, rs1, rs2",     "Branch-if-equal/greater: if rs1==rs2 goto rd1; if rs1>rs2 goto rd2"),
-        new("JAL.T",   "++", "rd1, imm",               "rd1 = PC+1; jump to PC+imm  (rd2='0+')"),
-        new("JALR.T",  "++", "rd1, rs1, imm",          "rd1 = PC+1; jump to rs1+imm"),
-        new("LPC.T",   "++", "rd1, imm",               "rd1 = PC+imm; no jump         (rd2='0-')"),
+        new("ADD.T",   "--", "rd1, rs1, rs2",         "",   "rd1 = rs1 + rs2"),
+        new("SUB.T",   "--", "rd1, rs1, rs2",         "--", "rd1 = rs1 − rs2"),
+        new("STI.T",   "--", "rd1, rs2",               "--", "rd1 = −rs2"),
+        new("ADDI.T",  "-0", "rd1, rs1, imm",          "",   "rd1 = rs1 + imm"),
+        new("NOP.T",   "-0", "",                        "",   "No-op (write 0 to X0)"),
+        new("LI.T",    "-0", "rd1, imm",               "",   "rd1 = imm"),
+        new("MV.T",    "-0", "rd1, rs1",               "",   "rd1 = rs1"),
+        new("ADDI2.T", "-+", "rd1, rd2, rs1, rs2",     "",   "rd1 = rs1 + imm1;  rd2 = rs2 + imm2"),
+        new("MUL.T",   "0-", "rd1, rs1, rs2",          "",   "rd1 = rs1 × rs2"),
+        new("MINW.T",  "00", "rd1, rs1, rs2",          "--", "rd1 = min-wordwise(rs1, rs2)"),
+        new("MINT.T",  "00", "rd1, rs1, rs2",          "-0", "rd1 = min-tritwise(rs1, rs2)"),
+        new("MAXW.T",  "00", "rd1, rs1, rs2",          "+-", "rd1 = max-wordwise(rs1, rs2)"),
+        new("MAXT.T",  "00", "rd1, rs1, rs2",          "+0", "rd1 = max-tritwise(rs1, rs2)"),
+        new("SLIM.T",  "0+", "rd1, rs1, imm",          "--", "Shift left by imm, fill with −"),
+        new("SLIZ.T",  "0+", "rd1, rs1, imm",          "-0", "Shift left by imm, fill with 0"),
+        new("SLIP.T",  "0+", "rd1, rs1, imm",          "-+", "Shift left by imm, fill with +"),
+        new("SRIM.T",  "0+", "rd1, rs1, imm",          "+-", "Shift right by imm, fill with −"),
+        new("SRIZ.T",  "0+", "rd1, rs1, imm",          "+0", "Shift right by imm, fill with 0"),
+        new("SRIP.T",  "0+", "rd1, rs1, imm",          "++", "Shift right by imm, fill with +"),
+        new("SC.T",    "0+", "rd1, rs1, imm",          "00", "Cyclic shift by imm"),
+        new("CMPW.T",  "+-", "rd1, rs1, rs2",          "",   "rd1 = wordwise compare(rs1, rs2)"),
+        new("CMPT.T",  "+-", "rd1, rs1, rs2",          "--", "rd1 = tritwise compare(rs1, rs2)"),
+        new("BCEG.T",  "+0", "rd1, rd2, rs1, rs2",     "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
+        new("JAL.T",   "++", "rd1, imm",               "0+", "rd1 = PC+1; jump to PC+imm"),
+        new("JALR.T",  "++", "rd1, rs1, imm",          "",   "rd1 = PC+1; jump to rs1+imm"),
+        new("LPC.T",   "++", "rd1, imm",               "0-", "rd1 = PC+imm; no jump"),
     ];
 }

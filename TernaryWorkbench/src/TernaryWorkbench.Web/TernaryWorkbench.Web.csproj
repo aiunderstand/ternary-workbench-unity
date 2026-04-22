@@ -19,4 +19,53 @@
     <ProjectReference Include="..\TernaryWorkbench.Rebel2Assembler\TernaryWorkbench.Rebel2Assembler.csproj" />
   </ItemGroup>
 
+  <UsingTask TaskName="GitInfo" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Hash Output="true" ParameterType="System.String" />
+      <CommitDate Output="true" ParameterType="System.String" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+try
+{
+    var psi = new System.Diagnostics.ProcessStartInfo("git")
+    {
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    psi.Arguments = "rev-parse --short HEAD";
+    using (var p = System.Diagnostics.Process.Start(psi))
+    {
+        Hash = p.StandardOutput.ReadToEnd().Trim();
+        p.WaitForExit();
+        if (p.ExitCode != 0) { Hash = "dev"; CommitDate = ""; return true; }
+    }
+    psi.Arguments = "log -1 --format=%cI";
+    using (var p = System.Diagnostics.Process.Start(psi))
+    {
+        CommitDate = p.StandardOutput.ReadToEnd().Trim();
+        p.WaitForExit();
+    }
+}
+catch { Hash = "dev"; CommitDate = ""; }
+]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+    <GitInfo>
+      <Output TaskParameter="Hash" PropertyName="GitCommitHash" />
+      <Output TaskParameter="CommitDate" PropertyName="GitCommitDate" />
+    </GitInfo>
+    <PropertyGroup>
+      <GitCommitUrl>https://github.com/aiunderstand/ternary-workbench/commit/$(GitCommitHash)</GitCommitUrl>
+      <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BuildInfoFile)" Overwrite="true" Lines="&#xD;&#xA;namespace TernaryWorkbench.Web%3B&#xD;&#xA;&#xD;&#xA;internal static class BuildInfo&#xD;&#xA;{&#xD;&#xA;    public const string CommitHash = &quot;$(GitCommitHash)&quot;%3B&#xD;&#xA;    public const string CommitDate = &quot;$(GitCommitDate)&quot;%3B&#xD;&#xA;    public const string CommitUrl = &quot;$(GitCommitUrl)&quot;%3B&#xD;&#xA;}" />
+    <ItemGroup>
+      <Compile Include="$(BuildInfoFile)" Condition="!@(Compile-&gt;AnyHaveMetadataValue('Identity', '$(BuildInfoFile)'))" />
+    </ItemGroup>
+  </Target>
+
 </Project>

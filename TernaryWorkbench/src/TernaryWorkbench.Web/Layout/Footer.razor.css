@@ -1,0 +1,33 @@
+.tw-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tw-footer-link {
+    font-size: 11px;
+    color: #757575;
+    text-decoration: none;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tw-footer-link:hover {
+    text-decoration: underline;
+    color: #212121;
+}
+
+.tw-footer-github-icon {
+    vertical-align: middle;
+    flex-shrink: 0;
+}
