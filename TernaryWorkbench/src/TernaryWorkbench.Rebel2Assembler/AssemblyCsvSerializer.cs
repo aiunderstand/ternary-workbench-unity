@@ -106,13 +106,14 @@ public static class AssemblyCsvSerializer
             var directionField = fields[3].Trim();
 
             // Validate ISA
-            if (!string.Equals(isaField, Isa.Rebel2, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(isaField, Isa.Rebel6, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(isaField, Isa.Rebel2,   StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(isaField, Isa.Rebel2v2, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(isaField, Isa.Rebel6,   StringComparison.OrdinalIgnoreCase))
             {
                 errors.Add(new CsvParseError(
                     fileLineNumber,
                     rawLine,
-                    $"Unknown ISA \"{isaField}\". Expected \"{Isa.Rebel2}\" or \"{Isa.Rebel6}\"."));
+                    $"Unknown ISA \"{isaField}\". Expected \"{Isa.Rebel2}\", \"{Isa.Rebel2v2}\", or \"{Isa.Rebel6}\"."));
                 continue;
             }
 
@@ -131,22 +132,26 @@ public static class AssemblyCsvSerializer
                 continue;
             }
 
-            // Validate machine code for REBEL-2 (10 balanced-ternary trits)
-            if (string.Equals(isaField, Isa.Rebel2, StringComparison.OrdinalIgnoreCase))
+            // Validate machine code format and opcode recognition (REBEL-2 and REBEL-2v2)
+            if (string.Equals(isaField, Isa.Rebel2,   StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(isaField, Isa.Rebel2v2, StringComparison.OrdinalIgnoreCase))
             {
                 if (machineField.Length != 10 || !machineField.All(ch => ch is '+' or '-' or '0'))
                 {
                     errors.Add(new CsvParseError(
                         fileLineNumber,
                         rawLine,
-                        $"Machine code \"{machineField}\" is not a valid 10-trit REBEL-2 instruction."));
+                        $"Machine code \"{machineField}\" is not a valid 10-trit {isaField} instruction."));
                     continue;
                 }
 
                 // Verify the opcode is recognised by attempting a disassembly
                 try
                 {
-                    InstructionDisassembler.Disassemble(machineField);
+                    var patterns = string.Equals(isaField, Isa.Rebel2v2, StringComparison.OrdinalIgnoreCase)
+                        ? InstructionSet2v2.Patterns
+                        : null; // null → defaults to v1 patterns inside Disassemble
+                    InstructionDisassembler.Disassemble(machineField, patterns);
                 }
                 catch (InvalidOperationException ex)
                 {

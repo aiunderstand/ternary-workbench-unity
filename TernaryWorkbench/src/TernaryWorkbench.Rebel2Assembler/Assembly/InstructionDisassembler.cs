@@ -8,8 +8,9 @@ internal static class InstructionDisassembler
     /// <summary>
     /// Disassemble a 10-trit machine code string into a mnemonic+operands string.
     /// </summary>
-    public static string Disassemble(string instruction)
+    public static string Disassemble(string instruction, IReadOnlyDictionary<string, InstructionPattern>? patterns = null)
     {
+        patterns ??= Patterns;
         if (instruction.Length != 10)
             throw new InvalidOperationException($"Instruction must be 10 trits long, got {instruction.Length}.");
 
@@ -30,7 +31,7 @@ internal static class InstructionDisassembler
             { Rd2, rd2 }
         };
 
-        var pattern = ResolvePattern(opcode, fields)
+        var pattern = ResolvePattern(opcode, fields, patterns)
             ?? throw new InvalidOperationException($"Unknown opcode '{opcode}'.");
 
         var operands = pattern.AssemblyOperands
@@ -47,9 +48,9 @@ internal static class InstructionDisassembler
     // Pattern matching
     // -------------------------------------------------------------------------
 
-    private static InstructionPattern? ResolvePattern(string opcode, IReadOnlyDictionary<string, string> fields)
+    private static InstructionPattern? ResolvePattern(string opcode, IReadOnlyDictionary<string, string> fields, IReadOnlyDictionary<string, InstructionPattern> patterns)
     {
-        var best = Patterns.Values
+        var best = patterns.Values
             .Select((pattern, index) => (pattern, index, score: ScorePattern(pattern, opcode, fields)))
             .Where(x => x.score >= 0)
             .OrderByDescending(x => x.score)

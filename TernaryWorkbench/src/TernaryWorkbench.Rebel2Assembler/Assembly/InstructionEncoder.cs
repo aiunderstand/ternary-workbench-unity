@@ -6,19 +6,20 @@ namespace TernaryWorkbench.Rebel2Assembler.Assembly;
 internal static class InstructionEncoder
 {
     /// <summary>Translate a single-instruction string to a 10-trit machine code string.</summary>
-    public static string Translate(string instruction)
+    public static string Translate(string instruction, IReadOnlyDictionary<string, InstructionPattern>? patterns = null)
     {
         var parsed = InstructionParser.ParsePage(instruction);
         if (parsed.Instructions.Count != 1)
             throw new InvalidOperationException("Translate expects exactly one instruction.");
-        return Translate(parsed.Instructions[0], parsed.Labels);
+        return Translate(parsed.Instructions[0], parsed.Labels, patterns);
     }
 
     /// <summary>Translate a parsed instruction (with label context) to a 10-trit machine code string.</summary>
-    public static string Translate(ParsedInstruction instruction, IReadOnlyDictionary<string, LabelDefinition>? labels = null)
+    public static string Translate(ParsedInstruction instruction, IReadOnlyDictionary<string, LabelDefinition>? labels = null, IReadOnlyDictionary<string, InstructionPattern>? patterns = null)
     {
+        patterns ??= Patterns;
         var mnemonic = instruction.Parts[0];
-        var pattern = ResolvePattern(mnemonic)
+        var pattern = ResolvePattern(mnemonic, patterns)
             ?? throw new InvalidOperationException($"Unknown mnemonic '{mnemonic}' on line {instruction.LineNumber}.");
 
         var operands = instruction.Parts.Skip(1).ToList();
@@ -90,14 +91,14 @@ internal static class InstructionEncoder
             $"Unable to parse operand '{operand}' for field '{field}' on line {lineNumber}. Unknown register, immediate value, or label.");
     }
 
-    private static InstructionPattern? ResolvePattern(string mnemonic)
+    private static InstructionPattern? ResolvePattern(string mnemonic, IReadOnlyDictionary<string, InstructionPattern> patterns)
     {
-        if (Patterns.TryGetValue(mnemonic, out var pattern))
+        if (patterns.TryGetValue(mnemonic, out var pattern))
             return pattern;
         // Tolerate missing .T suffix
         return mnemonic.EndsWith(".T", StringComparison.OrdinalIgnoreCase)
             ? null
-            : Patterns.GetValueOrDefault($"{mnemonic}.T");
+            : patterns.GetValueOrDefault($"{mnemonic}.T");
     }
 
     private static bool TryParseTritPair(string token, out string result)

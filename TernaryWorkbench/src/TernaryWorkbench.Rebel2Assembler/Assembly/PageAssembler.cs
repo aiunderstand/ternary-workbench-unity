@@ -5,14 +5,14 @@ namespace TernaryWorkbench.Rebel2Assembler.Assembly;
 
 internal static class PageAssembler
 {
-    public static IReadOnlyList<AssembledInstruction> AssemblePage(string assembly, bool padPage, string padInstruction)
+    public static IReadOnlyList<AssembledInstruction> AssemblePage(string assembly, bool padPage, string padInstruction, IReadOnlyDictionary<string, InstructionPattern>? patterns = null)
     {
         var instructions = new List<AssembledInstruction>(PageInstructionCount);
         var parsed = InstructionParser.ParsePage(assembly);
 
         foreach (var parsedInstruction in parsed.Instructions)
         {
-            var machineCode = InstructionEncoder.Translate(parsedInstruction, parsed.Labels);
+            var machineCode = InstructionEncoder.Translate(parsedInstruction, parsed.Labels, patterns);
             instructions.Add(new AssembledInstruction(
                 instructions.Count,
                 AddressSpace[instructions.Count],
@@ -23,7 +23,7 @@ internal static class PageAssembler
         if (!padPage || instructions.Count >= PageInstructionCount)
             return instructions;
 
-        var padMachineCode = InstructionEncoder.Translate(padInstruction);
+        var padMachineCode = InstructionEncoder.Translate(padInstruction, patterns);
         while (instructions.Count < PageInstructionCount)
         {
             var address = AddressSpace[instructions.Count];
