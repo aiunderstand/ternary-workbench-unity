@@ -484,8 +484,8 @@
         new("R", "rs2", "func", "ADD.T, SUB.T, MUL.T, MULH.T, DIV.T, REM.T, MOD.T — register × register, func selects variant"),
         new("I", "imm", "func", "ADDI.T, MINI.T, MAXI.T, SL*.T, SR*.T, SC.T, CMP*I.T — immediate operand, func selects variant"),
         new("D", "rs2", "rd2",  "LI2.T, BCEG.T — both rd1 and rd2 are explicit operand registers"),
-        new("U", "00",  "func", "STI.T, NTI.T, PTI.T, MTI.T, CYCLEUP.T, SWAP.T — unary; rs2 fixed to 00"),
         new("E", "rs2", "rs3",  "MAJV.T — 3 sources; rs3 encoded in Rd2 slot"),
+        new("U", "00",  "func", "STI.T, NTI.T, PTI.T, MTI.T, CYCLEUP.T, SWAP.T — unary; rs2 fixed to 00"),
     ];
 
     private static readonly List<InstructionRef> _instructionReference2v2 =
@@ -496,8 +496,8 @@
         new("MUL.T",     "--", "rd1, rs1, rs2",      "-0", "rd1 = rs1 × rs2"),
         new("MULH.T",    "--", "rd1, rs1, rs2",      "-+", "rd1 = high word of rs1 × rs2"),
         new("DIV.T",     "--", "rd1, rs1, rs2",      "0-", "rd1 = rs1 ÷ rs2"),
-        new("REM.T",     "--", "rd1, rs1, rs2",      "0+", "rd1 = rs1 rem rs2 (truncated remainder)"),
-        new("MOD.T",     "--", "rd1, rs1, rs2",      "+-", "rd1 = rs1 mod rs2 (floored remainder)"),
+        new("REM.T",     "--", "rd1, rs1, rs2",      "0+", "rd1 = rs1 rem rs2 (truncated, rounded towards zero)"),
+        new("MOD.T",     "--", "rd1, rs1, rs2",      "+-", "rd1 = rs1 mod rs2 (floored, rounded towards -∞)"),
         // Group 2 — Data Move / Load / Store / Unary (00)
         new("ADDI.T",    "00", "rd1, rs1, imm",      "00", "rd1 = rs1 + imm"),
         new("NOP.T",     "00", "",                   "00", "No-op (0000000000)"),
@@ -505,12 +505,12 @@
         new("MV.T",      "00", "rd1, rs1",           "00", "rd1 = rs1"),
         new("LD2.T",     "00", "rd1, rs1",           "-0", "rd1 = memory[rs1] (load trit-pair)"),
         new("ST2.T",     "00", "rs1, rs2",           "-+", "memory[rs1] = rs2 (store trit-pair)"),
-        new("STI.T",     "00", "rd1, rs1",           "--", "rd1 = −rs1 (ternary negation)"),
-        new("NTI.T",     "00", "rd1, rs1",           "0-", "rd1 = negative-trit-indicator(rs1)"),
-        new("PTI.T",     "00", "rd1, rs1",           "0+", "rd1 = positive-trit-indicator(rs1)"),
+        new("STI.T",     "00", "rd1, rs1",           "--", "rd1 = −rs1 (standard ternary inversion)"),
+        new("NTI.T",     "00", "rd1, rs1",           "0-", "rd1 = negative ternary inversion(rs1)"),
+        new("PTI.T",     "00", "rd1, rs1",           "0+", "rd1 = positive ternary inversion(rs1)"),
         new("MTI.T",     "00", "rd1, rs1",           "+-", "rd1 = magnitude(rs1)"),
         new("CYCLEUP.T", "00", "rd1, rs1",           "+0", "rd1 = cyclic shift up of rs1"),
-        new("SWAP.T",    "00", "rd1, rs1",           "++", "rd1 = swap adjacent trit-pairs of rs1"),
+        new("SWAP.T",    "00", "rd1, rs1",           "++", "swap content of registers rd1 and rs1"),
         // Group 3 — Load Immediate Pair (-+)
         new("LI2.T",     "-+", "rd1, rd2, rs1, rs2", "",   "rd1 = rs1;  rd2 = rs2 (load two immediates)"),
         // Group 4 — Majority Vote (0-)
@@ -538,7 +538,7 @@
         new("BNE.T",     "+-", "rd1, rs1, rs2",      "0-", "if rs1 ≠ rs2 jump to rd1"),
         new("KIMP.T",    "+-", "rd1, rs1, rs2",      "0+", "rd1 = Kleene implication(rs1, rs2)"),
         // Group 8 — Conditional Branch (+0)
-        new("BCEG.T",    "+0", "rd1, rd2, rs1, rs2", "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
+        new("BCEG.T",    "+0", "rd1, rd2, rs1, rs2", "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2 else no jump"),
         // Group 9 — Control Flow & System (++)
         new("JAL.T",     "++", "rd1, imm",           "0+", "rd1 = PC+1; jump to PC+imm"),
         new("JALR.T",    "++", "rd1, rs1, imm",      "00", "rd1 = PC+1; jump to rs1+imm"),
