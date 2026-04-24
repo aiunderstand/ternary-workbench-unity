@@ -15,6 +15,7 @@
     <MudItem xs="12">
         <MudRadioGroup T="string" @bind-Value="_isa">
             <MudRadio T="string" Value="@Isa.Rebel2" Color="Color.Primary">REBEL-2</MudRadio>
+            <MudRadio T="string" Value="@Isa.Rebel2v2" Color="Color.Primary">REBEL-2v2</MudRadio>
             <MudTooltip Text="REBEL-6 support is planned for a future release.">
                 <MudRadio T="string" Value="@Isa.Rebel6" Color="Color.Primary" Disabled="true">REBEL-6 (not yet implemented)</MudRadio>
             </MudTooltip>
@@ -176,61 +177,122 @@
     <!-- Instruction set reference -->
     <MudItem xs="12">
         <MudExpansionPanels>
-            <MudExpansionPanel Text="REBEL-2 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
-                <MudText Typo="Typo.body2" Class="mb-2">
-                    Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
-                    Each 10-trit word is split into five 2-trit fields.
-                </MudText>
+            @if (_isa != Isa.Rebel2v2)
+            {
+                <MudExpansionPanel Text="REBEL-2 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
+                        Each 10-trit word is split into five 2-trit fields.
+                    </MudText>
 
-                <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
-                <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference" Class="mb-3">
-                    <HeaderContent>
-                        <MudTh>Format</MudTh>
-                        <MudTh>Trits [1:0]</MudTh>
-                        <MudTh>Trits [3:2]</MudTh>
-                        <MudTh>Trits [5:4]</MudTh>
-                        <MudTh>Trits [7:6]</MudTh>
-                        <MudTh>Trits [9:8]</MudTh>
-                        <MudTh>Examples</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd><b>@context.Name</b></MudTd>
-                        <MudTd Style="font-family:monospace">op</MudTd>
-                        <MudTd Style="font-family:monospace">rs1</MudTd>
-                        <MudTd Style="font-family:monospace">@context.Field54</MudTd>
-                        <MudTd Style="font-family:monospace">rd1</MudTd>
-                        <MudTd Style="font-family:monospace">@context.Field98</MudTd>
-                        <MudTd>@context.Examples</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh>Format</MudTh>
+                            <MudTh>Trits [1:0]</MudTh>
+                            <MudTh>Trits [3:2]</MudTh>
+                            <MudTh>Trits [5:4]</MudTh>
+                            <MudTh>Trits [7:6]</MudTh>
+                            <MudTh>Trits [9:8]</MudTh>
+                            <MudTh>Examples</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd><b>@context.Name</b></MudTd>
+                            <MudTd Style="font-family:monospace">op</MudTd>
+                            <MudTd Style="font-family:monospace">rs1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
+                            <MudTd Style="font-family:monospace">rd1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field98</MudTd>
+                            <MudTd>@context.Examples</MudTd>
+                        </RowTemplate>
+                    </MudTable>
 
-                <MudText Typo="Typo.body2" Class="mb-2">
-                    <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
-                    Immediates are 2-trit balanced integers in range [-4, 4].
-                </MudText>
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
+                        Immediates are 2-trit balanced integers in range [-4, 4].
+                    </MudText>
 
-                <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
-                <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference">
-                    <HeaderContent>
-                        <MudTh>Mnemonic</MudTh>
-                        <MudTh>Opcode</MudTh>
-                        <MudTh>Operands</MudTh>
-                        <MudTh>Func / Rd2</MudTh>
-                        <MudTh>Description</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
-                        <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
-                        <MudTd Style="font-family:monospace">@context.Operands</MudTd>
-                        <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
-                        <MudTd>@context.Description</MudTd>
-                    </RowTemplate>
-                </MudTable>
-                <MudText Typo="Typo.body2" Class="mt-2">
-                    <b>Comments:</b> #, ;, $, // strip to end-of-line. "quoted" strings and (parenthesised) annotations are also removed.
-                    <b>Labels</b> are resolved within a page (up to 9 instructions).
-                </MudText>
-            </MudExpansionPanel>
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference">
+                        <HeaderContent>
+                            <MudTh>Mnemonic</MudTh>
+                            <MudTh>Opcode</MudTh>
+                            <MudTh>Operands</MudTh>
+                            <MudTh>Func / Rd2</MudTh>
+                            <MudTh>Description</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Operands</MudTd>
+                            <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
+                            <MudTd>@context.Description</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    <MudText Typo="Typo.body2" Class="mt-2">
+                        <b>Comments:</b> #, ;, $, // strip to end-of-line. "quoted" strings and (parenthesised) annotations are also removed.
+                        <b>Labels</b> are resolved within a page (up to 9 instructions).
+                    </MudText>
+                </MudExpansionPanel>
+            }
+            @if (_isa == Isa.Rebel2v2)
+            {
+                <MudExpansionPanel Text="REBEL-2v2 Instruction Set Reference (ISA v0.5)" Icon="@Icons.Material.Filled.Info">
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
+                        Each 10-trit word is split into five 2-trit fields.
+                    </MudText>
+
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference2v2" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh>Format</MudTh>
+                            <MudTh>Trits [1:0]</MudTh>
+                            <MudTh>Trits [3:2]</MudTh>
+                            <MudTh>Trits [5:4]</MudTh>
+                            <MudTh>Trits [7:6]</MudTh>
+                            <MudTh>Trits [9:8]</MudTh>
+                            <MudTh>Examples</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd><b>@context.Name</b></MudTd>
+                            <MudTd Style="font-family:monospace">op</MudTd>
+                            <MudTd Style="font-family:monospace">rs1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
+                            <MudTd Style="font-family:monospace">rd1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field98</MudTd>
+                            <MudTd>@context.Examples</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
+                        Immediates are 2-trit balanced integers in range [-4, 4].
+                    </MudText>
+
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference2v2">
+                        <HeaderContent>
+                            <MudTh>Mnemonic</MudTh>
+                            <MudTh>Opcode</MudTh>
+                            <MudTh>Operands</MudTh>
+                            <MudTh>Func / Rd2</MudTh>
+                            <MudTh>Description</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Operands</MudTd>
+                            <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
+                            <MudTd>@context.Description</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    <MudText Typo="Typo.body2" Class="mt-2">
+                        <b>Comments:</b> #, ;, $, // strip to end-of-line. "quoted" strings and (parenthesised) annotations are also removed.
+                        <b>Labels</b> are resolved within a page (up to 9 instructions).
+                    </MudText>
+                </MudExpansionPanel>
+            }
         </MudExpansionPanels>
     </MudItem>
 
@@ -300,7 +362,9 @@
     {
         try
         {
-            var assembled = TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.AssembleInstructions(_inputText);
+            var assembled = _isa == Isa.Rebel2v2
+                ? Rebel2v2Assembler.AssembleInstructions(_inputText)
+                : TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.AssembleInstructions(_inputText);
             foreach (var inst in assembled)
             {
                 _results.Add(new ResultRow(inst.Address, inst.Assembly, inst.MachineCode));
@@ -332,7 +396,9 @@
             var address = i < addresses.Length ? addresses[i] : $"[{i}]";
             try
             {
-                var mnemonic = TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.Disassemble(code);
+                var mnemonic = _isa == Isa.Rebel2v2
+                    ? Rebel2v2Assembler.Disassemble(code)
+                    : TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.Disassemble(code);
                 _results.Add(new ResultRow(address, mnemonic, code));
                 _history.Add(new AssemblyRecord(mnemonic, code, _isa, AssemblyDirection.Disassemble));
             }
@@ -411,6 +477,77 @@
         new("R",  "rs2", "func", "ADD.T, MUL.T, CMP*.T — register × register, func selects variant"),
         new("I",  "imm", "func", "ADDI.T, SL*.T, SR*.T, SC.T, JAL.T, JALR.T — immediate operand, func selects variant"),
         new("D",  "rs2", "rd2",  "ADDI2.T, BCEG.T — both rd1 and rd2 are explicit destination registers"),
+    ];
+
+    private static readonly List<FormatRef> _formatReference2v2 =
+    [
+        new("R", "rs2", "func", "ADD.T, SUB.T, MUL.T, MULH.T, DIV.T, REM.T, MOD.T — register × register, func selects variant"),
+        new("I", "imm", "func", "ADDI.T, MINI.T, MAXI.T, SL*.T, SR*.T, SC.T, CMP*I.T — immediate operand, func selects variant"),
+        new("D", "rs2", "rd2",  "LI2.T, BCEG.T — both rd1 and rd2 are explicit operand registers"),
+        new("U", "00",  "func", "STI.T, NTI.T, PTI.T, MTI.T, CYCLEUP.T, SWAP.T — unary; rs2 fixed to 00"),
+        new("E", "rs2", "rs3",  "MAJV.T — 3 sources; rs3 encoded in Rd2 slot"),
+    ];
+
+    private static readonly List<InstructionRef> _instructionReference2v2 =
+    [
+        // Group 1 — Core ALU (--)
+        new("ADD.T",     "--", "rd1, rs1, rs2",      "00", "rd1 = rs1 + rs2"),
+        new("SUB.T",     "--", "rd1, rs1, rs2",      "--", "rd1 = rs1 − rs2"),
+        new("MUL.T",     "--", "rd1, rs1, rs2",      "-0", "rd1 = rs1 × rs2"),
+        new("MULH.T",    "--", "rd1, rs1, rs2",      "-+", "rd1 = high word of rs1 × rs2"),
+        new("DIV.T",     "--", "rd1, rs1, rs2",      "0-", "rd1 = rs1 ÷ rs2"),
+        new("REM.T",     "--", "rd1, rs1, rs2",      "0+", "rd1 = rs1 rem rs2 (truncated remainder)"),
+        new("MOD.T",     "--", "rd1, rs1, rs2",      "+-", "rd1 = rs1 mod rs2 (floored remainder)"),
+        // Group 2 — Data Move / Load / Store / Unary (00)
+        new("ADDI.T",    "00", "rd1, rs1, imm",      "00", "rd1 = rs1 + imm"),
+        new("NOP.T",     "00", "",                   "00", "No-op (0000000000)"),
+        new("LI.T",      "00", "rd1, imm",           "00", "rd1 = imm"),
+        new("MV.T",      "00", "rd1, rs1",           "00", "rd1 = rs1"),
+        new("LD2.T",     "00", "rd1, rs1",           "-0", "rd1 = memory[rs1] (load trit-pair)"),
+        new("ST2.T",     "00", "rs1, rs2",           "-+", "memory[rs1] = rs2 (store trit-pair)"),
+        new("STI.T",     "00", "rd1, rs1",           "--", "rd1 = −rs1 (ternary negation)"),
+        new("NTI.T",     "00", "rd1, rs1",           "0-", "rd1 = negative-trit-indicator(rs1)"),
+        new("PTI.T",     "00", "rd1, rs1",           "0+", "rd1 = positive-trit-indicator(rs1)"),
+        new("MTI.T",     "00", "rd1, rs1",           "+-", "rd1 = magnitude(rs1)"),
+        new("CYCLEUP.T", "00", "rd1, rs1",           "+0", "rd1 = cyclic shift up of rs1"),
+        new("SWAP.T",    "00", "rd1, rs1",           "++", "rd1 = swap adjacent trit-pairs of rs1"),
+        // Group 3 — Load Immediate Pair (-+)
+        new("LI2.T",     "-+", "rd1, rd2, rs1, rs2", "",   "rd1 = rs1;  rd2 = rs2 (load two immediates)"),
+        // Group 4 — Majority Vote (0-)
+        new("MAJV.T",    "0-", "rd1, rs1, rs2, rs3", "",   "rd1 = majority(rs1, rs2, rs3)"),
+        // Group 5 — Min / Max (-0)
+        new("MINW.T",    "-0", "rd1, rs1, rs2",      "--", "rd1 = min-wordwise(rs1, rs2)"),
+        new("MINT.T",    "-0", "rd1, rs1, rs2",      "-0", "rd1 = min-tritwise(rs1, rs2)"),
+        new("MINI.T",    "-0", "rd1, rs1, imm",      "-+", "rd1 = min-tritwise(rs1, imm)"),
+        new("MAXI.T",    "-0", "rd1, rs1, imm",      "0-", "rd1 = max-tritwise(rs1, imm)"),
+        new("MAXW.T",    "-0", "rd1, rs1, rs2",      "+-", "rd1 = max-wordwise(rs1, rs2)"),
+        new("MAXT.T",    "-0", "rd1, rs1, rs2",      "+0", "rd1 = max-tritwise(rs1, rs2)"),
+        // Group 6 — Shift (0+)
+        new("SLIM.T",    "0+", "rd1, rs1, imm",      "--", "Shift left by imm, fill with −"),
+        new("SLIZ.T",    "0+", "rd1, rs1, imm",      "-0", "Shift left by imm, fill with 0"),
+        new("SLIP.T",    "0+", "rd1, rs1, imm",      "-+", "Shift left by imm, fill with +"),
+        new("SC.T",      "0+", "rd1, rs1, imm",      "00", "Cyclic shift by imm"),
+        new("SRIM.T",    "0+", "rd1, rs1, imm",      "+-", "Shift right by imm, fill with −"),
+        new("SRIZ.T",    "0+", "rd1, rs1, imm",      "+0", "Shift right by imm, fill with 0"),
+        new("SRIP.T",    "0+", "rd1, rs1, imm",      "++", "Shift right by imm, fill with +"),
+        // Group 7 — Compare / Branch / Logic (+-)
+        new("CMPW.T",    "+-", "rd1, rs1, rs2",      "00", "rd1 = wordwise compare(rs1, rs2)"),
+        new("CMPT.T",    "+-", "rd1, rs1, rs2",      "--", "rd1 = tritwise compare(rs1, rs2)"),
+        new("CMPWI.T",   "+-", "rd1, rs1, imm",      "-0", "rd1 = wordwise compare(rs1, imm)"),
+        new("CMPTI.T",   "+-", "rd1, rs1, imm",      "-+", "rd1 = tritwise compare(rs1, imm)"),
+        new("BNE.T",     "+-", "rd1, rs1, rs2",      "0-", "if rs1 ≠ rs2 jump to rd1"),
+        new("KIMP.T",    "+-", "rd1, rs1, rs2",      "0+", "rd1 = Kleene implication(rs1, rs2)"),
+        // Group 8 — Conditional Branch (+0)
+        new("BCEG.T",    "+0", "rd1, rd2, rs1, rs2", "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
+        // Group 9 — Control Flow & System (++)
+        new("JAL.T",     "++", "rd1, imm",           "0+", "rd1 = PC+1; jump to PC+imm"),
+        new("JALR.T",    "++", "rd1, rs1, imm",      "00", "rd1 = PC+1; jump to rs1+imm"),
+        new("LPC.T",     "++", "rd1, imm",           "0-", "rd1 = PC+imm; no jump"),
+        new("FENCE.T",   "++", "",                   "-0", "Memory fence"),
+        new("WFI.T",     "++", "",                   "-+", "Wait for interrupt"),
+        new("IRET.T",    "++", "",                   "+-", "Return from interrupt"),
+        new("EBREAK.T",  "++", "",                   "+0", "Debug breakpoint"),
+        new("ECALL.T",   "++", "",                   "++", "Environment call"),
     ];
 
     private static readonly List<InstructionRef> _instructionReference =
