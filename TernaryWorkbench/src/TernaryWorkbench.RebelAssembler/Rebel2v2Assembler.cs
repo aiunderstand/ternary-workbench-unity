@@ -4,11 +4,11 @@ using TernaryWorkbench.RebelAssembler.Assembly.Models;
 namespace TernaryWorkbench.RebelAssembler;
 
 /// <summary>
-/// Public facade for assembling and disassembling REBEL-2v2 (ISA v0.5) programs.
+/// Public facade for assembling and disassembling REBEL-2v2 (V2.2) programs.
 /// </summary>
 /// <remarks>
 /// Uses the same encoding infrastructure as <see cref="Rebel2Assembler"/> but with
-/// the updated ISA v0.5 instruction table.  Key differences from v1:
+/// the updated V2.2 instruction table.  Key differences from V2.0:
 /// <list type="bullet">
 ///   <item>NOP.T is now <c>0000000000</c> (opcode "00") instead of <c>-000000000</c>.</item>
 ///   <item>MUL.T has moved to opcode "--" (func "-0"); opcode "0-" now hosts MAJV.T.</item>

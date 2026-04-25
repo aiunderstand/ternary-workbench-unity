@@ -4,7 +4,7 @@ using static TernaryWorkbench.RebelAssembler.Assembly.InstructionSet;
 namespace TernaryWorkbench.RebelAssembler.Assembly;
 
 /// <summary>
-/// ISA v0.5 instruction patterns for the REBEL-2v2 assembler.
+/// V2.2 instruction patterns for the REBEL-2v2 assembler.
 /// <para>
 /// Encoding layout (2 trits each = 10 total):
 /// <c>opcode[0..1] | Rs1[2..3] | Rs2[4..5] | Rd1[6..7] | Rd2[8..9]</c>
@@ -25,7 +25,7 @@ internal static class InstructionSet2v2
     public const string DefaultPaddingInstruction = "NOP.T";
 
     /// <summary>
-    /// Complete v0.5 pattern table: 46 hardware encodings + 3 pseudo-instructions.
+    /// Complete V2.2 pattern table: 46 hardware encodings + 3 pseudo-instructions.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, InstructionPattern> Patterns =
         new Dictionary<string, InstructionPattern>(StringComparer.OrdinalIgnoreCase)

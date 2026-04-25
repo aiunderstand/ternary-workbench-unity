@@ -177,53 +177,100 @@
         <MudExpansionPanels>
             @if (_isa != Isa.Rebel2v2)
             {
-                <MudExpansionPanel Text="REBEL-2 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
+                <MudExpansionPanel Text="REBEL-2 Instruction Set Reference (V2.0)" Icon="@Icons.Material.Filled.Info">
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">1.1 Overview</MudText>
                     <MudText Typo="Typo.body2" Class="mb-2">
-                        Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
-                        Each 10-trit word is split into five 2-trit fields.
+                        REBEL-2 (RISC-V-like Energy efficient Balanced tErnary Logic CPU, 2-trit address postfix) is a novel balanced ternary (radix-3)
+                        CPU implemented in MRCS (logic gates synthesis, transistor level simulation), SONIC (gate level simulation, ternary HDL export for
+                        FPGA/ASIC) and R2R (assembly level simulation, C to REBEL compiler toolchain). It follows Brousentsov's ternary principles:
+                        ternary logic, ternary memory, and balanced ternary encoding. REBEL-2 is a modern, compact, Harvard-style ternary processor
+                        optimized for simplicity and educational use rather than high-throughput, compact area commercial deployment.
                     </MudText>
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Key design points:</b></MudText>
+                    <ul style="margin:0 0 8px 20px; font-size:0.875rem">
+                        <li>Balanced ternary (+, 0, −) native implementation using MRCS standard cell library.</li>
+                        <li>Harvard architecture: instructions in ROM, data in RAM; instruction and data accesses can occur in the same cycle.</li>
+                        <li>Register-oriented processing (not load/store); no external memory required for processing.</li>
+                        <li>Single-cycle instruction execution (instruction-read at rising edge, write at falling edge).</li>
+                        <li>Multi-page programs: each page holds up to 9 instructions; labels are resolved within a page.</li>
+                    </ul>
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">1.2 Intended Use &amp; Strengths</MudText>
+                    <ul style="margin:0 0 8px 20px; font-size:0.875rem">
+                        <li>Educational platform for embedded ternary computing concepts and teaching.</li>
+                        <li>Low-power, simplicity-focused designs and prototyping.</li>
+                        <li>Demonstrator of balanced ternary technology stack.</li>
+                        <li>Easily scalable to wider address widths (e.g., tryte width) and to REBEL-6, a binary-compatible 32-trit architecture for practical applications.</li>
+                    </ul>
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">1.3 Architecture Summary</MudText>
+                    <ul style="margin:0 0 12px 20px; font-size:0.875rem">
+                        <li><b>Radix:</b> Balanced ternary (trits: +, 0, −).</li>
+                        <li><b>Data path width:</b> 2-trit memory address bus (postfix "−2"); 9 registers (X−4 … X4).</li>
+                        <li><b>Architecture style:</b> Harvard (split instruction/data memories).</li>
+                        <li><b>Model:</b> Register-processing (instructions operate on registers directly, low data movement).</li>
+                        <li><b>Instruction timing:</b> Single-cycle; read at rising edge, write at falling edge.</li>
+                        <li><b>ISA inspiration:</b> RISC-V principles (simplicity, shift complexity to software).</li>
+                    </ul>
 
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
-                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference" Class="mb-3">
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference" Class="mb-1">
                         <HeaderContent>
                             <MudTh>Format</MudTh>
-                            <MudTh>Trits [1:0]</MudTh>
-                            <MudTh>Trits [3:2]</MudTh>
-                            <MudTh>Trits [5:4]</MudTh>
-                            <MudTh>Trits [7:6]</MudTh>
                             <MudTh>Trits [9:8]</MudTh>
+                            <MudTh>Trits [7:6]</MudTh>
+                            <MudTh>Trits [5:4]</MudTh>
+                            <MudTh>Trits [3:2]</MudTh>
+                            <MudTh>Trits [1:0]</MudTh>
                             <MudTh>Examples</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd><b>@context.Name</b></MudTd>
-                            <MudTd Style="font-family:monospace">op</MudTd>
-                            <MudTd Style="font-family:monospace">rs1</MudTd>
-                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
-                            <MudTd Style="font-family:monospace">rd1</MudTd>
                             <MudTd Style="font-family:monospace">@context.Field98</MudTd>
+                            <MudTd Style="font-family:monospace">rd1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
+                            <MudTd Style="font-family:monospace">rs1</MudTd>
+                            <MudTd Style="font-family:monospace">op</MudTd>
                             <MudTd>@context.Examples</MudTd>
                         </RowTemplate>
                     </MudTable>
+                    <MudText Typo="Typo.caption" Class="mb-3">Fields are shown MST-first (most significant trit at left).</MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-2">
                         <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
-                        Immediates are 2-trit balanced integers in range [-4, 4].
+                        Immediates (imm2) are 2-trit balanced integers in range [−4, 4].
                     </MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
-                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
+                        <MudText Typo="Typo.body2">Sort by:</MudText>
+                        <MudSelect T="string" @bind-Value="_rebel2SortBy" Dense="true" Variant="Variant.Outlined"
+                                   Style="min-width:160px" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Mnemonic")">Mnemonic</MudSelectItem>
+                            <MudSelectItem Value="@("Format")">Format</MudSelectItem>
+                            <MudSelectItem Value="@("Opcode")">Opcode</MudSelectItem>
+                            <MudSelectItem Value="@("Func")">Func</MudSelectItem>
+                            <MudSelectItem Value="@("Category")">Category</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@SortedRebel2Instructions">
                         <HeaderContent>
                             <MudTh>Mnemonic</MudTh>
+                            <MudTh>Format</MudTh>
                             <MudTh>Opcode</MudTh>
                             <MudTh>Operands</MudTh>
                             <MudTh>Func / Rd2</MudTh>
+                            <MudTh>Category</MudTh>
                             <MudTh>Description</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                            <MudTd>@context.Format</MudTd>
                             <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
                             <MudTd Style="font-family:monospace">@context.Operands</MudTd>
                             <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
+                            <MudTd>@context.Category</MudTd>
                             <MudTd>@context.Description</MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -243,7 +290,7 @@
                     </MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
-                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference6" Class="mb-3">
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference6" Class="mb-1">
                         <HeaderContent>
                             <MudTh>Format</MudTh>
                             <MudTh>Trits [31:8]</MudTh>
@@ -259,6 +306,7 @@
                             <MudTd>@context.Examples</MudTd>
                         </RowTemplate>
                     </MudTable>
+                    <MudText Typo="Typo.caption" Class="mb-3">Fields are shown MST-first (most significant trit at left).</MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
@@ -302,53 +350,79 @@
             }
             @if (_isa == Isa.Rebel2v2)
             {
-                <MudExpansionPanel Text="REBEL-2v2 Instruction Set Reference (ISA v0.5)" Icon="@Icons.Material.Filled.Info">
+                <MudExpansionPanel Text="REBEL-2v2 Instruction Set Reference (V2.2)" Icon="@Icons.Material.Filled.Info">
                     <MudText Typo="Typo.body2" Class="mb-2">
                         Instructions use balanced-ternary trits: <b>+</b>, <b>0</b>, <b>-</b>.
-                        Each 10-trit word is split into five 2-trit fields.
+                        Each 10-trit word is split into five 2-trit fields. Same register file and Harvard architecture as V2.0.
                     </MudText>
 
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Changes from V2.0 → V2.2</MudText>
+                    <ul style="margin:0 0 12px 20px; font-size:0.875rem">
+                        <li><b>NOP.T</b> encoding changed to <code>0000000000</code> (opcode <code>00</code>).</li>
+                        <li><b>MUL.T</b> moved to opcode <code>--</code> (func <code>-0</code>); opcode <code>0-</code> now hosts MAJV.T.</li>
+                        <li><b>ADDI.T, LI.T, MV.T, STI.T</b> and the Min/Max family have new opcodes.</li>
+                        <li><b>New instructions:</b> MULH.T, DIV.T, REM.T, MOD.T, LD2.T, ST2.T, NTI.T, PTI.T, MTI.T, CYCLEUP.T, SWAP.T, MAJV.T, MINI.T, MAXI.T, CMPWI.T, CMPTI.T, BNE.T, KIMP.T, FENCE.T, WFI.T, IRET.T, EBREAK.T, ECALL.T.</li>
+                        <li><b>Memory access:</b> LD2.T and ST2.T add optional memory load/store (V2.2 extension; base REBEL-2 is register-oriented).</li>
+                        <li><b>Expanded format set:</b> R, I, D, E (MAJV 3-source), U (unary, rs2 fixed to 00).</li>
+                    </ul>
+
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
-                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference2v2" Class="mb-3">
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference2v2" Class="mb-1">
                         <HeaderContent>
                             <MudTh>Format</MudTh>
-                            <MudTh>Trits [1:0]</MudTh>
-                            <MudTh>Trits [3:2]</MudTh>
-                            <MudTh>Trits [5:4]</MudTh>
-                            <MudTh>Trits [7:6]</MudTh>
                             <MudTh>Trits [9:8]</MudTh>
+                            <MudTh>Trits [7:6]</MudTh>
+                            <MudTh>Trits [5:4]</MudTh>
+                            <MudTh>Trits [3:2]</MudTh>
+                            <MudTh>Trits [1:0]</MudTh>
                             <MudTh>Examples</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd><b>@context.Name</b></MudTd>
-                            <MudTd Style="font-family:monospace">op</MudTd>
-                            <MudTd Style="font-family:monospace">rs1</MudTd>
-                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
-                            <MudTd Style="font-family:monospace">rd1</MudTd>
                             <MudTd Style="font-family:monospace">@context.Field98</MudTd>
+                            <MudTd Style="font-family:monospace">rd1</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Field54</MudTd>
+                            <MudTd Style="font-family:monospace">rs1</MudTd>
+                            <MudTd Style="font-family:monospace">op</MudTd>
                             <MudTd>@context.Examples</MudTd>
                         </RowTemplate>
                     </MudTable>
+                    <MudText Typo="Typo.caption" Class="mb-3">Fields are shown MST-first (most significant trit at left).</MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-2">
                         <b>Registers:</b> X-4 (--), X-3 (-0), X-2 (-+), X-1 (0-), X0 (00, hardwired zero), X1 (0+), X2 (+-), X3 (+0), X4 (++).
-                        Immediates are 2-trit balanced integers in range [-4, 4].
+                        Immediates (imm2) are 2-trit balanced integers in range [−4, 4].
                     </MudText>
 
                     <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
-                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_instructionReference2v2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
+                        <MudText Typo="Typo.body2">Sort by:</MudText>
+                        <MudSelect T="string" @bind-Value="_rebel2v2SortBy" Dense="true" Variant="Variant.Outlined"
+                                   Style="min-width:160px" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Mnemonic")">Mnemonic</MudSelectItem>
+                            <MudSelectItem Value="@("Format")">Format</MudSelectItem>
+                            <MudSelectItem Value="@("Opcode")">Opcode</MudSelectItem>
+                            <MudSelectItem Value="@("Func")">Func</MudSelectItem>
+                            <MudSelectItem Value="@("Category")">Category</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@SortedRebel2v2Instructions">
                         <HeaderContent>
                             <MudTh>Mnemonic</MudTh>
+                            <MudTh>Format</MudTh>
                             <MudTh>Opcode</MudTh>
                             <MudTh>Operands</MudTh>
                             <MudTh>Func / Rd2</MudTh>
+                            <MudTh>Category</MudTh>
                             <MudTh>Description</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                            <MudTd>@context.Format</MudTd>
                             <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
                             <MudTd Style="font-family:monospace">@context.Operands</MudTd>
                             <MudTd Style="font-family:monospace">@context.FuncRd2</MudTd>
+                            <MudTd>@context.Category</MudTd>
                             <MudTd>@context.Description</MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -381,8 +455,10 @@
     private readonly List<AssemblyRecord> _history = new();
     private readonly List<TernaryWorkbench.RebelAssembler.CsvParseError> _importErrors = new();
 
-    // ---- REBEL-6 sort-by state ----
-    private string _rebel6SortBy = "Mnemonic";
+    // ---- Sort-by state ----
+    private string _rebel2SortBy   = "Mnemonic";
+    private string _rebel2v2SortBy = "Mnemonic";
+    private string _rebel6SortBy   = "Mnemonic";
 
     private string InputLabel => (_isa, _mode) switch
     {
@@ -556,7 +632,7 @@
     // -------------------------------------------------------------------------
 
     private record FormatRef(string Name, string Field54, string Field98, string Examples);
-    private record InstructionRef(string Mnemonic, string Opcode, string Operands, string FuncRd2, string Description);
+    private record InstructionRef(string Mnemonic, string Format, string Opcode, string Operands, string FuncRd2, string Category, string Description);
 
     // -------------------------------------------------------------------------
     // REBEL-6 reference data
@@ -564,6 +640,24 @@
 
     private record FormatRef6(string Name, string F318, string F74, string F30, string Examples);
     private record InstructionRef6(string Mnemonic, string Format, string Opcode, string Func, string Operands, string Category, string Description);
+
+    private IEnumerable<InstructionRef> SortedRebel2Instructions => _rebel2SortBy switch
+    {
+        "Format"   => _instructionReference.OrderBy(r => r.Format).ThenBy(r => r.Opcode).ThenBy(r => r.FuncRd2),
+        "Opcode"   => _instructionReference.OrderBy(r => r.Opcode).ThenBy(r => r.FuncRd2),
+        "Func"     => _instructionReference.OrderBy(r => r.FuncRd2).ThenBy(r => r.Mnemonic),
+        "Category" => _instructionReference.OrderBy(r => r.Category).ThenBy(r => r.Mnemonic),
+        _          => _instructionReference.OrderBy(r => r.Mnemonic)
+    };
+
+    private IEnumerable<InstructionRef> SortedRebel2v2Instructions => _rebel2v2SortBy switch
+    {
+        "Format"   => _instructionReference2v2.OrderBy(r => r.Format).ThenBy(r => r.Opcode).ThenBy(r => r.FuncRd2),
+        "Opcode"   => _instructionReference2v2.OrderBy(r => r.Opcode).ThenBy(r => r.FuncRd2),
+        "Func"     => _instructionReference2v2.OrderBy(r => r.FuncRd2).ThenBy(r => r.Mnemonic),
+        "Category" => _instructionReference2v2.OrderBy(r => r.Category).ThenBy(r => r.Mnemonic),
+        _          => _instructionReference2v2.OrderBy(r => r.Mnemonic)
+    };
 
     private IEnumerable<InstructionRef6> SortedRebel6Instructions => _rebel6SortBy switch
     {
@@ -702,92 +796,92 @@
     private static readonly List<InstructionRef> _instructionReference2v2 =
     [
         // Group 1 — Core ALU (--)
-        new("ADD.T",     "--", "rd1, rs1, rs2",      "00", "rd1 = rs1 + rs2"),
-        new("SUB.T",     "--", "rd1, rs1, rs2",      "--", "rd1 = rs1 − rs2"),
-        new("MUL.T",     "--", "rd1, rs1, rs2",      "-0", "rd1 = rs1 × rs2"),
-        new("MULH.T",    "--", "rd1, rs1, rs2",      "-+", "rd1 = high word of rs1 × rs2"),
-        new("DIV.T",     "--", "rd1, rs1, rs2",      "0-", "rd1 = rs1 ÷ rs2"),
-        new("REM.T",     "--", "rd1, rs1, rs2",      "0+", "rd1 = rs1 rem rs2 (truncated, rounded towards zero)"),
-        new("MOD.T",     "--", "rd1, rs1, rs2",      "+-", "rd1 = rs1 mod rs2 (floored, rounded towards -∞)"),
+        new("ADD.T",     "R", "--", "rd1, rs1, rs2",       "00", "Ternary ALU",     "rd1 = rs1 + rs2"),
+        new("SUB.T",     "R", "--", "rd1, rs1, rs2",       "--", "Ternary ALU",     "rd1 = rs1 − rs2"),
+        new("MUL.T",     "R", "--", "rd1, rs1, rs2",       "-0", "Ternary ALU",     "rd1 = rs1 × rs2"),
+        new("MULH.T",    "R", "--", "rd1, rs1, rs2",       "-+", "Ternary ALU",     "rd1 = high word of rs1 × rs2"),
+        new("DIV.T",     "R", "--", "rd1, rs1, rs2",       "0-", "Ternary ALU",     "rd1 = rs1 ÷ rs2"),
+        new("REM.T",     "R", "--", "rd1, rs1, rs2",       "0+", "Ternary ALU",     "rd1 = rs1 rem rs2 (truncated, towards zero)"),
+        new("MOD.T",     "R", "--", "rd1, rs1, rs2",       "+-", "Ternary ALU",     "rd1 = rs1 mod rs2 (floored, towards −∞)"),
         // Group 2 — Data Move / Load / Store / Unary (00)
-        new("ADDI.T",    "00", "rd1, rs1, imm",      "00", "rd1 = rs1 + imm"),
-        new("NOP.T",     "00", "",                   "00", "No-op (0000000000)"),
-        new("LI.T",      "00", "rd1, imm",           "00", "rd1 = imm"),
-        new("MV.T",      "00", "rd1, rs1",           "00", "rd1 = rs1"),
-        new("LD2.T",     "00", "rd1, rs1",           "-0", "rd1 = memory[rs1] (load trit-pair)"),
-        new("ST2.T",     "00", "rs1, rs2",           "-+", "memory[rs1] = rs2 (store trit-pair)"),
-        new("STI.T",     "00", "rd1, rs1",           "--", "rd1 = −rs1 (standard ternary inversion)"),
-        new("NTI.T",     "00", "rd1, rs1",           "0-", "rd1 = negative ternary inversion(rs1)"),
-        new("PTI.T",     "00", "rd1, rs1",           "0+", "rd1 = positive ternary inversion(rs1)"),
-        new("MTI.T",     "00", "rd1, rs1",           "+-", "rd1 = magnitude(rs1)"),
-        new("CYCLEUP.T", "00", "rd1, rs1",           "+0", "rd1 = cyclic shift up of rs1"),
-        new("SWAP.T",    "00", "rd1, rs1",           "++", "swap content of registers rd1 and rs1"),
+        new("ADDI.T",    "I", "00", "rd1, rs1, imm2",      "00", "Ternary ALU",     "rd1 = rs1 + imm2"),
+        new("NOP.T",     "I", "00", "",                    "00", "Pseudo",           "No-op (0000000000)"),
+        new("LI.T",      "I", "00", "rd1, imm2",           "00", "Pseudo",           "rd1 = imm2"),
+        new("MV.T",      "I", "00", "rd1, rs1",            "00", "Pseudo",           "rd1 = rs1"),
+        new("LD2.T",     "I", "00", "rd1, rs1",            "-0", "Ternary Load",     "rd1 = memory[rs1] (load trit-pair)"),
+        new("ST2.T",     "U", "00", "rs1, rs2",            "-+", "Ternary Store",    "memory[rs1] = rs2 (store trit-pair)"),
+        new("STI.T",     "U", "00", "rd1, rs1",            "--", "Ternary ALU",      "rd1 = −rs1 (standard ternary inversion)"),
+        new("NTI.T",     "U", "00", "rd1, rs1",            "0-", "Ternary ALU",      "rd1 = negative ternary inversion(rs1)"),
+        new("PTI.T",     "U", "00", "rd1, rs1",            "0+", "Ternary ALU",      "rd1 = positive ternary inversion(rs1)"),
+        new("MTI.T",     "U", "00", "rd1, rs1",            "+-", "Ternary ALU",      "rd1 = magnitude(rs1)"),
+        new("CYCLEUP.T", "U", "00", "rd1, rs1",            "+0", "Ternary ALU",      "rd1 = cyclic shift up of rs1"),
+        new("SWAP.T",    "U", "00", "rd1, rs1",            "++", "Ternary ALU",      "swap contents of rd1 and rs1"),
         // Group 3 — Load Immediate Pair (-+)
-        new("LI2.T",     "-+", "rd1, rd2, rs1, rs2", "",   "rd1 = rs1;  rd2 = rs2 (load two immediates)"),
+        new("LI2.T",     "D", "-+", "rd1, rd2, rs1, rs2",  "",   "Ternary ALU",      "rd1 = rs1;  rd2 = rs2 (load two immediates)"),
         // Group 4 — Majority Vote (0-)
-        new("MAJV.T",    "0-", "rd1, rs1, rs2, rs3", "",   "rd1 = majority(rs1, rs2, rs3)"),
+        new("MAJV.T",    "E", "0-", "rd1, rs1, rs2, rs3",  "",   "Ternary ALU",      "rd1 = majority(rs1, rs2, rs3)"),
         // Group 5 — Min / Max (-0)
-        new("MINW.T",    "-0", "rd1, rs1, rs2",      "--", "rd1 = min-wordwise(rs1, rs2)"),
-        new("MINT.T",    "-0", "rd1, rs1, rs2",      "-0", "rd1 = min-tritwise(rs1, rs2)"),
-        new("MINI.T",    "-0", "rd1, rs1, imm",      "-+", "rd1 = min-tritwise(rs1, imm)"),
-        new("MAXI.T",    "-0", "rd1, rs1, imm",      "0-", "rd1 = max-tritwise(rs1, imm)"),
-        new("MAXW.T",    "-0", "rd1, rs1, rs2",      "+-", "rd1 = max-wordwise(rs1, rs2)"),
-        new("MAXT.T",    "-0", "rd1, rs1, rs2",      "+0", "rd1 = max-tritwise(rs1, rs2)"),
+        new("MINW.T",    "R", "-0", "rd1, rs1, rs2",       "--", "Ternary Min/Max", "rd1 = min-wordwise(rs1, rs2)"),
+        new("MINT.T",    "R", "-0", "rd1, rs1, rs2",       "-0", "Ternary Min/Max", "rd1 = min-tritwise(rs1, rs2)"),
+        new("MINI.T",    "I", "-0", "rd1, rs1, imm2",      "-+", "Ternary Min/Max", "rd1 = min-tritwise(rs1, imm2)"),
+        new("MAXI.T",    "I", "-0", "rd1, rs1, imm2",      "0-", "Ternary Min/Max", "rd1 = max-tritwise(rs1, imm2)"),
+        new("MAXW.T",    "R", "-0", "rd1, rs1, rs2",       "+-", "Ternary Min/Max", "rd1 = max-wordwise(rs1, rs2)"),
+        new("MAXT.T",    "R", "-0", "rd1, rs1, rs2",       "+0", "Ternary Min/Max", "rd1 = max-tritwise(rs1, rs2)"),
         // Group 6 — Shift (0+)
-        new("SLIM.T",    "0+", "rd1, rs1, imm",      "--", "Shift left by imm, fill with −"),
-        new("SLIZ.T",    "0+", "rd1, rs1, imm",      "-0", "Shift left by imm, fill with 0"),
-        new("SLIP.T",    "0+", "rd1, rs1, imm",      "-+", "Shift left by imm, fill with +"),
-        new("SC.T",      "0+", "rd1, rs1, imm",      "00", "Cyclic shift by imm"),
-        new("SRIM.T",    "0+", "rd1, rs1, imm",      "+-", "Shift right by imm, fill with −"),
-        new("SRIZ.T",    "0+", "rd1, rs1, imm",      "+0", "Shift right by imm, fill with 0"),
-        new("SRIP.T",    "0+", "rd1, rs1, imm",      "++", "Shift right by imm, fill with +"),
+        new("SLIM.T",    "I", "0+", "rd1, rs1, imm2",      "--", "Ternary Shift",   "Shift left by imm2, fill with −"),
+        new("SLIZ.T",    "I", "0+", "rd1, rs1, imm2",      "-0", "Ternary Shift",   "Shift left by imm2, fill with 0"),
+        new("SLIP.T",    "I", "0+", "rd1, rs1, imm2",      "-+", "Ternary Shift",   "Shift left by imm2, fill with +"),
+        new("SC.T",      "I", "0+", "rd1, rs1, imm2",      "00", "Ternary Shift",   "Cyclic shift by imm2"),
+        new("SRIM.T",    "I", "0+", "rd1, rs1, imm2",      "+-", "Ternary Shift",   "Shift right by imm2, fill with −"),
+        new("SRIZ.T",    "I", "0+", "rd1, rs1, imm2",      "+0", "Ternary Shift",   "Shift right by imm2, fill with 0"),
+        new("SRIP.T",    "I", "0+", "rd1, rs1, imm2",      "++", "Ternary Shift",   "Shift right by imm2, fill with +"),
         // Group 7 — Compare / Branch / Logic (+-)
-        new("CMPW.T",    "+-", "rd1, rs1, rs2",      "00", "rd1 = wordwise compare(rs1, rs2)"),
-        new("CMPT.T",    "+-", "rd1, rs1, rs2",      "--", "rd1 = tritwise compare(rs1, rs2)"),
-        new("CMPWI.T",   "+-", "rd1, rs1, imm",      "-0", "rd1 = wordwise compare(rs1, imm)"),
-        new("CMPTI.T",   "+-", "rd1, rs1, imm",      "-+", "rd1 = tritwise compare(rs1, imm)"),
-        new("BNE.T",     "+-", "rd1, rs1, rs2",      "0-", "if rs1 ≠ rs2 jump to rd1"),
-        new("KIMP.T",    "+-", "rd1, rs1, rs2",      "0+", "rd1 = Kleene implication(rs1, rs2)"),
+        new("CMPW.T",    "R", "+-", "rd1, rs1, rs2",       "00", "Ternary Compare", "rd1 = wordwise compare(rs1, rs2)"),
+        new("CMPT.T",    "R", "+-", "rd1, rs1, rs2",       "--", "Ternary Compare", "rd1 = tritwise compare(rs1, rs2)"),
+        new("CMPWI.T",   "I", "+-", "rd1, rs1, imm2",      "-0", "Ternary Compare", "rd1 = wordwise compare(rs1, imm2)"),
+        new("CMPTI.T",   "I", "+-", "rd1, rs1, imm2",      "-+", "Ternary Compare", "rd1 = tritwise compare(rs1, imm2)"),
+        new("BNE.T",     "R", "+-", "rd1, rs1, rs2",       "0-", "Ternary Branch",  "if rs1 ≠ rs2 jump to rd1"),
+        new("KIMP.T",    "R", "+-", "rd1, rs1, rs2",       "0+", "Ternary ALU",     "rd1 = Kleene implication(rs1, rs2)"),
         // Group 8 — Conditional Branch (+0)
-        new("BCEG.T",    "+0", "rd1, rd2, rs1, rs2", "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2 else no jump"),
+        new("BCEG.T",    "D", "+0", "rd1, rd2, rs1, rs2",  "",   "Ternary Branch",  "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
         // Group 9 — Control Flow & System (++)
-        new("JAL.T",     "++", "rd1, imm",           "0+", "rd1 = PC+1; jump to PC+imm"),
-        new("JALR.T",    "++", "rd1, rs1, imm",      "00", "rd1 = PC+1; jump to rs1+imm"),
-        new("LPC.T",     "++", "rd1, imm",           "0-", "rd1 = PC+imm; no jump"),
-        new("FENCE.T",   "++", "",                   "-0", "Memory fence"),
-        new("WFI.T",     "++", "",                   "-+", "Wait for interrupt"),
-        new("IRET.T",    "++", "",                   "+-", "Return from interrupt"),
-        new("EBREAK.T",  "++", "",                   "+0", "Debug breakpoint"),
-        new("ECALL.T",   "++", "",                   "++", "Environment call"),
+        new("JAL.T",     "I", "++", "rd1, imm2",           "0+", "Ternary Control", "rd1 = PC+1; jump to PC+imm2"),
+        new("JALR.T",    "I", "++", "rd1, rs1, imm2",      "00", "Ternary Control", "rd1 = PC+1; jump to rs1+imm2"),
+        new("LPC.T",     "I", "++", "rd1, imm2",           "0-", "Ternary Control", "rd1 = PC+imm2; no jump"),
+        new("FENCE.T",   "R", "++", "",                    "-0", "Ternary Control", "Memory fence"),
+        new("WFI.T",     "R", "++", "",                    "-+", "Ternary Control", "Wait for interrupt"),
+        new("IRET.T",    "R", "++", "",                    "+-", "Ternary Control", "Return from interrupt"),
+        new("EBREAK.T",  "R", "++", "",                    "+0", "Ternary Control", "Debug breakpoint"),
+        new("ECALL.T",   "R", "++", "",                    "++", "Ternary Control", "Environment call"),
     ];
 
     private static readonly List<InstructionRef> _instructionReference =
     [
-        new("ADD.T",   "--", "rd1, rs1, rs2",         "",   "rd1 = rs1 + rs2"),
-        new("SUB.T",   "--", "rd1, rs1, rs2",         "--", "rd1 = rs1 − rs2"),
-        new("STI.T",   "--", "rd1, rs2",               "--", "rd1 = −rs2"),
-        new("ADDI.T",  "-0", "rd1, rs1, imm",          "",   "rd1 = rs1 + imm"),
-        new("NOP.T",   "-0", "",                        "",   "No-op (write 0 to X0)"),
-        new("LI.T",    "-0", "rd1, imm",               "",   "rd1 = imm"),
-        new("MV.T",    "-0", "rd1, rs1",               "",   "rd1 = rs1"),
-        new("ADDI2.T", "-+", "rd1, rd2, rs1, rs2",     "",   "rd1 = rs1 + imm1;  rd2 = rs2 + imm2"),
-        new("MUL.T",   "0-", "rd1, rs1, rs2",          "",   "rd1 = rs1 × rs2"),
-        new("MINW.T",  "00", "rd1, rs1, rs2",          "--", "rd1 = min-wordwise(rs1, rs2)"),
-        new("MINT.T",  "00", "rd1, rs1, rs2",          "-0", "rd1 = min-tritwise(rs1, rs2)"),
-        new("MAXW.T",  "00", "rd1, rs1, rs2",          "+-", "rd1 = max-wordwise(rs1, rs2)"),
-        new("MAXT.T",  "00", "rd1, rs1, rs2",          "+0", "rd1 = max-tritwise(rs1, rs2)"),
-        new("SLIM.T",  "0+", "rd1, rs1, imm",          "--", "Shift left by imm, fill with −"),
-        new("SLIZ.T",  "0+", "rd1, rs1, imm",          "-0", "Shift left by imm, fill with 0"),
-        new("SLIP.T",  "0+", "rd1, rs1, imm",          "-+", "Shift left by imm, fill with +"),
-        new("SRIM.T",  "0+", "rd1, rs1, imm",          "+-", "Shift right by imm, fill with −"),
-        new("SRIZ.T",  "0+", "rd1, rs1, imm",          "+0", "Shift right by imm, fill with 0"),
-        new("SRIP.T",  "0+", "rd1, rs1, imm",          "++", "Shift right by imm, fill with +"),
-        new("SC.T",    "0+", "rd1, rs1, imm",          "00", "Cyclic shift by imm"),
-        new("CMPW.T",  "+-", "rd1, rs1, rs2",          "",   "rd1 = wordwise compare(rs1, rs2)"),
-        new("CMPT.T",  "+-", "rd1, rs1, rs2",          "--", "rd1 = tritwise compare(rs1, rs2)"),
-        new("BCEG.T",  "+0", "rd1, rd2, rs1, rs2",     "",   "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
-        new("JAL.T",   "++", "rd1, imm",               "0+", "rd1 = PC+1; jump to PC+imm"),
-        new("JALR.T",  "++", "rd1, rs1, imm",          "",   "rd1 = PC+1; jump to rs1+imm"),
-        new("LPC.T",   "++", "rd1, imm",               "0-", "rd1 = PC+imm; no jump"),
+        new("ADD.T",   "R", "--", "rd1, rs1, rs2",          "00", "Ternary ALU",     "rd1 = rs1 + rs2"),
+        new("SUB.T",   "R", "--", "rd1, rs1, rs2",          "--", "Ternary ALU",     "rd1 = rs1 − rs2"),
+        new("STI.T",   "R", "--", "rd1, rs2",               "--", "Ternary ALU",     "rd1 = −rs2"),
+        new("ADDI.T",  "I", "-0", "rd1, rs1, imm2",         "00", "Ternary ALU",     "rd1 = rs1 + imm2"),
+        new("NOP.T",   "I", "-0", "",                        "00", "Pseudo",          "No-op (write 0 to X0)"),
+        new("LI.T",    "I", "-0", "rd1, imm2",              "00", "Pseudo",          "rd1 = imm2"),
+        new("MV.T",    "I", "-0", "rd1, rs1",               "00", "Pseudo",          "rd1 = rs1"),
+        new("ADDI2.T", "D", "-+", "rd1, rd2, rs1, rs2",     "",   "Ternary ALU",     "rd1 = rs1 + imm1;  rd2 = rs2 + imm2"),
+        new("MUL.T",   "R", "0-", "rd1, rs1, rs2",          "00", "Ternary ALU",     "rd1 = rs1 × rs2"),
+        new("MINW.T",  "R", "00", "rd1, rs1, rs2",          "--", "Ternary Min/Max", "rd1 = min-wordwise(rs1, rs2)"),
+        new("MINT.T",  "R", "00", "rd1, rs1, rs2",          "-0", "Ternary Min/Max", "rd1 = min-tritwise(rs1, rs2)"),
+        new("MAXW.T",  "R", "00", "rd1, rs1, rs2",          "+-", "Ternary Min/Max", "rd1 = max-wordwise(rs1, rs2)"),
+        new("MAXT.T",  "R", "00", "rd1, rs1, rs2",          "+0", "Ternary Min/Max", "rd1 = max-tritwise(rs1, rs2)"),
+        new("SLIM.T",  "I", "0+", "rd1, rs1, imm2",         "--", "Ternary Shift",   "Shift left by imm2, fill with −"),
+        new("SLIZ.T",  "I", "0+", "rd1, rs1, imm2",         "-0", "Ternary Shift",   "Shift left by imm2, fill with 0"),
+        new("SLIP.T",  "I", "0+", "rd1, rs1, imm2",         "-+", "Ternary Shift",   "Shift left by imm2, fill with +"),
+        new("SRIM.T",  "I", "0+", "rd1, rs1, imm2",         "+-", "Ternary Shift",   "Shift right by imm2, fill with −"),
+        new("SRIZ.T",  "I", "0+", "rd1, rs1, imm2",         "+0", "Ternary Shift",   "Shift right by imm2, fill with 0"),
+        new("SRIP.T",  "I", "0+", "rd1, rs1, imm2",         "++", "Ternary Shift",   "Shift right by imm2, fill with +"),
+        new("SC.T",    "I", "0+", "rd1, rs1, imm2",         "00", "Ternary Shift",   "Cyclic shift by imm2"),
+        new("CMPW.T",  "R", "+-", "rd1, rs1, rs2",          "00", "Ternary Compare", "rd1 = wordwise compare(rs1, rs2)"),
+        new("CMPT.T",  "R", "+-", "rd1, rs1, rs2",          "--", "Ternary Compare", "rd1 = tritwise compare(rs1, rs2)"),
+        new("BCEG.T",  "D", "+0", "rd1, rd2, rs1, rs2",     "",   "Ternary Branch",  "if rs1 == rs2 goto rd1; if rs1 > rs2 goto rd2"),
+        new("JAL.T",   "I", "++", "rd1, imm2",              "0+", "Ternary Control", "rd1 = PC+1; jump to PC+imm2"),
+        new("JALR.T",  "I", "++", "rd1, rs1, imm2",         "00", "Ternary Control", "rd1 = PC+1; jump to rs1+imm2"),
+        new("LPC.T",   "I", "++", "rd1, imm2",              "0-", "Ternary Control", "rd1 = PC+imm2; no jump"),
     ];
 }
