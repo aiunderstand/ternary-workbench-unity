@@ -1,8 +1,8 @@
-using TernaryWorkbench.Rebel2Assembler.Assembly;
-using TernaryWorkbench.Rebel2Assembler.Assembly.Models;
-using static TernaryWorkbench.Rebel2Assembler.Assembly.InstructionSet;
+using TernaryWorkbench.RebelAssembler.Assembly;
+using TernaryWorkbench.RebelAssembler.Assembly.Models;
+using static TernaryWorkbench.RebelAssembler.Assembly.InstructionSet;
 
-namespace TernaryWorkbench.Rebel2Assembler;
+namespace TernaryWorkbench.RebelAssembler;
 
 /// <summary>
 /// Public facade for assembling and disassembling REBEL-2 programs.

@@ -1,6 +1,6 @@
 using TernaryWorkbench.CharTStringConverter;
 using TernaryWorkbench.Core;
-using TernaryWorkbench.Rebel2Assembler;
+using TernaryWorkbench.RebelAssembler;
 
 // -----------------------------------------------------------------------
 // TernaryWorkbench CLI
@@ -43,6 +43,14 @@ if (args[0].Equals("chart", StringComparison.OrdinalIgnoreCase))
 // REBEL-2 assembler subcommand: twb rebel2 asm <assembly>  |  twb rebel2 dis <code...>
 if (args[0].Equals("rebel2", StringComparison.OrdinalIgnoreCase))
     return RunRebel2(args[1..]);
+
+// REBEL-2v2 assembler subcommand: twb rebel2v2 asm <assembly>  |  twb rebel2v2 dis <code...>
+if (args[0].Equals("rebel2v2", StringComparison.OrdinalIgnoreCase))
+    return RunRebel2v2(args[1..]);
+
+// REBEL-6 assembler subcommand: twb rebel6 asm <assembly>  |  twb rebel6 dis <code...>
+if (args[0].Equals("rebel6", StringComparison.OrdinalIgnoreCase))
+    return RunRebel6(args[1..]);
 
 Radix? fromRadix = null, toRadix = null;
 bool lsdFirst = false, bct = false;
@@ -354,6 +362,170 @@ static int RunRebel2(string[] rebel2Args)
     }
 }
 
+// -----------------------------------------------------------------------
+// REBEL-2v2 subcommand
+// -----------------------------------------------------------------------
+
+static int RunRebel2v2(string[] rebel2v2Args)
+{
+    if (rebel2v2Args.Length == 0 || rebel2v2Args[0].Equals("--help", StringComparison.OrdinalIgnoreCase))
+    {
+        PrintRebel2v2Help();
+        return 0;
+    }
+
+    string sub = rebel2v2Args[0].ToLowerInvariant();
+    string[] rest = rebel2v2Args[1..];
+
+    switch (sub)
+    {
+        case "asm":
+        case "assemble":
+        {
+            string input = rest.Length > 0 ? string.Join(" ", rest) : string.Empty;
+            if (input == "-") input = Console.In.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                Error("rebel2v2 asm: no assembly input provided. Pass a value or '-' to read from stdin.");
+                return 1;
+            }
+            try
+            {
+                var instructions = Rebel2v2Assembler.AssembleInstructions(input);
+                foreach (var inst in instructions)
+                    Console.WriteLine(inst.MachineCode);
+                return 0;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Error($"rebel2v2 asm: {ex.Message}");
+                return 2;
+            }
+        }
+
+        case "dis":
+        case "disassemble":
+        {
+            IEnumerable<string> words;
+            if (rest.Length == 1 && rest[0] == "-")
+                words = Console.In.ReadToEnd()
+                    .Split(["\r\n", "\n", "\r"], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrWhiteSpace(l));
+            else
+                words = rest;
+
+            var wordList = words.ToList();
+            if (wordList.Count == 0)
+            {
+                Error("rebel2v2 dis: no machine code provided. Pass 10-trit words or '-' to read from stdin.");
+                return 1;
+            }
+
+            bool anyErrors = false;
+            foreach (var word in wordList)
+            {
+                try
+                {
+                    Console.WriteLine(Rebel2v2Assembler.Disassemble(word));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine($"Error ({word}): {ex.Message}");
+                    anyErrors = true;
+                }
+            }
+            return anyErrors ? 2 : 0;
+        }
+
+        default:
+            Error($"Unknown rebel2v2 subcommand '{rebel2v2Args[0]}'. Run 'twb rebel2v2 --help' for usage.");
+            return 1;
+    }
+}
+
+// -----------------------------------------------------------------------
+// REBEL-6 subcommand
+// -----------------------------------------------------------------------
+
+static int RunRebel6(string[] rebel6Args)
+{
+    if (rebel6Args.Length == 0 || rebel6Args[0].Equals("--help", StringComparison.OrdinalIgnoreCase))
+    {
+        PrintRebel6Help();
+        return 0;
+    }
+
+    string sub = rebel6Args[0].ToLowerInvariant();
+    string[] rest = rebel6Args[1..];
+
+    switch (sub)
+    {
+        case "asm":
+        case "assemble":
+        {
+            string input = rest.Length > 0 ? string.Join(" ", rest) : string.Empty;
+            if (input == "-") input = Console.In.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                Error("rebel6 asm: no assembly input provided. Pass a value or '-' to read from stdin.");
+                return 1;
+            }
+            try
+            {
+                var instructions = Rebel6Assembler.AssembleInstructions(input);
+                foreach (var inst in instructions)
+                    Console.WriteLine(inst.MachineCode);
+                return 0;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Error($"rebel6 asm: {ex.Message}");
+                return 2;
+            }
+        }
+
+        case "dis":
+        case "disassemble":
+        {
+            IEnumerable<string> words;
+            if (rest.Length == 1 && rest[0] == "-")
+                words = Console.In.ReadToEnd()
+                    .Split(["\r\n", "\n", "\r"], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrWhiteSpace(l));
+            else
+                words = rest;
+
+            var wordList = words.ToList();
+            if (wordList.Count == 0)
+            {
+                Error("rebel6 dis: no machine code provided. Pass 32-trit words or '-' to read from stdin.");
+                return 1;
+            }
+
+            bool anyErrors = false;
+            foreach (var word in wordList)
+            {
+                try
+                {
+                    Console.WriteLine(Rebel6Assembler.Disassemble(word));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine($"Error ({word}): {ex.Message}");
+                    anyErrors = true;
+                }
+            }
+            return anyErrors ? 2 : 0;
+        }
+
+        default:
+            Error($"Unknown rebel6 subcommand '{rebel6Args[0]}'. Run 'twb rebel6 --help' for usage.");
+            return 1;
+    }
+}
+
 static void PrintRebel2Help()
 {
     Console.WriteLine("""
@@ -381,6 +553,68 @@ static void PrintRebel2Help()
           twb rebel2 dis --+-+00+00
           twb rebel2 dis --+-+00+00 -0--++0000
           printf 'ADD.T X1, X2, X3\nNOP.T\n' | twb rebel2 asm -
+        """);
+}
+
+static void PrintRebel2v2Help()
+{
+    Console.WriteLine("""
+        TernaryWorkbench CLI — REBEL-2v2 Assembler / Disassembler (ISA v0.5)
+
+        USAGE
+          twb rebel2v2 asm <assembly>      Assemble one or more REBEL-2v2 mnemonics to 10-trit machine code
+          twb rebel2v2 dis <code> [code…]  Disassemble 10-trit machine code word(s) to mnemonics
+
+        INPUT
+          <assembly>  One instruction per line, up to 9 instructions (one ROM page).
+                      Labels, comments (#, ;, $, //), and annotations are supported.
+                      Pass '-' to read from stdin.
+          <code>      A 10-character string of balanced-ternary trits (+, -, 0).
+                      Pass '-' to read one code per line from stdin.
+
+        EXIT CODES
+          0  Success
+          1  Bad arguments
+          2  Assembly or disassembly error
+
+        EXAMPLES
+          twb rebel2v2 asm "ADD.T X1, X2, X3"
+          twb rebel2v2 asm "ADDI.T X1, X2, ++"
+          twb rebel2v2 dis --+-+00+00+
+          twb rebel2v2 dis --+-+00+00+ -0--++0000
+          printf 'ADD.T X1, X2, X3\nNOP.T\n' | twb rebel2v2 asm -
+        """);
+}
+
+static void PrintRebel6Help()
+{
+    Console.WriteLine("""
+        TernaryWorkbench CLI — REBEL-6 Assembler / Disassembler
+
+        USAGE
+          twb rebel6 asm <assembly>      Assemble one or more REBEL-6 mnemonics to 32-trit machine code
+          twb rebel6 dis <code> [code…]  Disassemble 32-trit machine code word(s) to mnemonics
+
+        INPUT
+          <assembly>  One instruction per line, up to 729 instructions (one ROM page).
+                      Labels, comments (#, ;, $, //), and annotations are supported.
+                      Both ternary (.t) and binary (RV32I-compatible) mnemonics are supported.
+                      Pass '-' to read from stdin.
+          <code>      A 32-character string of balanced-ternary trits (+, -, 0).
+                      Pass '-' to read one code per line from stdin.
+
+        EXIT CODES
+          0  Success
+          1  Bad arguments
+          2  Assembly or disassembly error
+
+        EXAMPLES
+          twb rebel6 asm "add.t X1, X2, X3"
+          twb rebel6 asm "addi.t X1, X2, 5"
+          twb rebel6 asm "lwa.t X1, 42"
+          twb rebel6 asm "add X1, X2, X3"
+          twb rebel6 dis 000000000000000000000000000000++
+          printf 'add.t X1, X2, X3\nnop.t\n' | twb rebel6 asm -
         """);
 }
 
@@ -423,7 +657,9 @@ static void PrintHelp()
         SUBCOMMANDS
           (none)              Radix converter (default)
           chart               charT-string encoder/decoder/detector
-          rebel2              REBEL-2 assembler and disassembler
+          rebel2              REBEL-2 (ISA v1) assembler and disassembler
+          rebel2v2            REBEL-2v2 (ISA v0.5) assembler and disassembler
+          rebel6              REBEL-6 assembler and disassembler
 
         RADIX CONVERTER USAGE
           twb --from <radix> --to <radix> <value> [options]
@@ -458,5 +694,8 @@ static void PrintHelp()
           twb --from dec --to hex 255
 
         For charT-string converter help: twb chart --help
+        For REBEL-2 assembler help:      twb rebel2 --help
+        For REBEL-2v2 assembler help:    twb rebel2v2 --help
+        For REBEL-6 assembler help:      twb rebel6 --help
         """);
 }

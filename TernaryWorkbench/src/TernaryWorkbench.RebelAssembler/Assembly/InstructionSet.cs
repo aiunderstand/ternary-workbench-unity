@@ -1,6 +1,6 @@
-using TernaryWorkbench.Rebel2Assembler.Assembly.Models;
+using TernaryWorkbench.RebelAssembler.Assembly.Models;
 
-namespace TernaryWorkbench.Rebel2Assembler.Assembly;
+namespace TernaryWorkbench.RebelAssembler.Assembly;
 
 internal static class InstructionSet
 {

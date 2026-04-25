@@ -10,7 +10,7 @@
         "dependencies": {
           "TernaryWorkbench.CharTStringConverter": "1.0.0",
           "TernaryWorkbench.Core": "1.0.0",
-          "TernaryWorkbench.Rebel2Assembler": "1.0.0"
+          "TernaryWorkbench.RebelAssembler": "1.0.0"
         },
         "runtime": {
           "TernaryWorkbench.Cli.dll": {}
@@ -35,9 +35,9 @@
           }
         }
       },
-      "TernaryWorkbench.Rebel2Assembler/1.0.0": {
+      "TernaryWorkbench.RebelAssembler/1.0.0": {
         "runtime": {
-          "TernaryWorkbench.Rebel2Assembler.dll": {
+          "TernaryWorkbench.RebelAssembler.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
           }
@@ -61,7 +61,7 @@
       "serviceable": false,
       "sha512": ""
     },
-    "TernaryWorkbench.Rebel2Assembler/1.0.0": {
+    "TernaryWorkbench.RebelAssembler/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

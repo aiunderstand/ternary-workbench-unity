@@ -1,4 +1,4 @@
-namespace TernaryWorkbench.Rebel2Assembler;
+namespace TernaryWorkbench.RebelAssembler;
 
 /// <summary>ISA identifiers used in CSV export/import and the UI.</summary>
 public static class Isa

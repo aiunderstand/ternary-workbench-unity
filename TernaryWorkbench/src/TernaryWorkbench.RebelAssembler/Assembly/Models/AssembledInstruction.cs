@@ -1,4 +1,4 @@
-namespace TernaryWorkbench.Rebel2Assembler.Assembly.Models;
+namespace TernaryWorkbench.RebelAssembler.Assembly.Models;
 
 /// <summary>
 /// A single assembled instruction with its address and source text.

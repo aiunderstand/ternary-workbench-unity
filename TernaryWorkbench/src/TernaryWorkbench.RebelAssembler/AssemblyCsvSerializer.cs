@@ -1,7 +1,7 @@
 using System.Text;
-using TernaryWorkbench.Rebel2Assembler.Assembly;
+using TernaryWorkbench.RebelAssembler.Assembly;
 
-namespace TernaryWorkbench.Rebel2Assembler;
+namespace TernaryWorkbench.RebelAssembler;
 
 /// <summary>
 /// Serialises <see cref="AssemblyRecord"/> collections to the TernaryWorkbench

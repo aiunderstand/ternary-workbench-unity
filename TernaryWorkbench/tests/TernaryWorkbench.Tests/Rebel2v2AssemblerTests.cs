@@ -1,7 +1,7 @@
 using FluentAssertions;
-using TernaryWorkbench.Rebel2Assembler;
+using TernaryWorkbench.RebelAssembler;
 using Xunit;
-using Asm = TernaryWorkbench.Rebel2Assembler.Rebel2v2Assembler;
+using Asm = TernaryWorkbench.RebelAssembler.Rebel2v2Assembler;
 
 namespace TernaryWorkbench.Tests;
 

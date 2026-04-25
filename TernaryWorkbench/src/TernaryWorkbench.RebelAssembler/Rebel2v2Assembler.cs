@@ -1,7 +1,7 @@
-using TernaryWorkbench.Rebel2Assembler.Assembly;
-using TernaryWorkbench.Rebel2Assembler.Assembly.Models;
+using TernaryWorkbench.RebelAssembler.Assembly;
+using TernaryWorkbench.RebelAssembler.Assembly.Models;
 
-namespace TernaryWorkbench.Rebel2Assembler;
+namespace TernaryWorkbench.RebelAssembler;
 
 /// <summary>
 /// Public facade for assembling and disassembling REBEL-2v2 (ISA v0.5) programs.

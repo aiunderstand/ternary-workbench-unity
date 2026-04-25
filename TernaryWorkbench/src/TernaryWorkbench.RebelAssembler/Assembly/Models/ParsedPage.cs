@@ -1,4 +1,4 @@
-namespace TernaryWorkbench.Rebel2Assembler.Assembly.Models;
+namespace TernaryWorkbench.RebelAssembler.Assembly.Models;
 
 internal sealed record ParsedPage(
     IReadOnlyList<ParsedInstruction> Instructions,

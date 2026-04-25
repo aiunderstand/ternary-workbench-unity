@@ -1,6 +1,6 @@
 @page "/rebel2-assembler"
-@using TernaryWorkbench.Rebel2Assembler
-@using TernaryWorkbench.Rebel2Assembler.Assembly.Models
+@using TernaryWorkbench.RebelAssembler
+@using TernaryWorkbench.RebelAssembler.Assembly.Models
 @using System.IO
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
@@ -16,9 +16,7 @@
         <MudRadioGroup T="string" @bind-Value="_isa">
             <MudRadio T="string" Value="@Isa.Rebel2" Color="Color.Primary">REBEL-2</MudRadio>
             <MudRadio T="string" Value="@Isa.Rebel2v2" Color="Color.Primary">REBEL-2v2</MudRadio>
-            <MudTooltip Text="REBEL-6 support is planned for a future release.">
-                <MudRadio T="string" Value="@Isa.Rebel6" Color="Color.Primary" Disabled="true">REBEL-6 (not yet implemented)</MudRadio>
-            </MudTooltip>
+            <MudRadio T="string" Value="@Isa.Rebel6" Color="Color.Primary">REBEL-6</MudRadio>
         </MudRadioGroup>
     </MudItem>
 
@@ -235,6 +233,73 @@
                     </MudText>
                 </MudExpansionPanel>
             }
+            @if (_isa == Isa.Rebel6)
+            {
+                <MudExpansionPanel Text="REBEL-6 Instruction Set Reference" Icon="@Icons.Material.Filled.Info">
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        32-trit balanced-ternary ISA with 729 registers (X-364 … X364; X0 = hardwired zero).
+                        The <b>.t</b> suffix marks ternary instructions; binary (RV32I-compatible) instructions have no suffix.
+                        PC increments by 1 per instruction slot.
+                    </MudText>
+
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Instruction Formats</b></MudText>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0" Items="@_formatReference6" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh>Format</MudTh>
+                            <MudTh>Trits [31:8]</MudTh>
+                            <MudTh>Trits [7:4]</MudTh>
+                            <MudTh>Trits [3:0]</MudTh>
+                            <MudTh>Examples</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd><b>@context.Name</b></MudTd>
+                            <MudTd Style="font-family:monospace">@context.F318</MudTd>
+                            <MudTd Style="font-family:monospace">@context.F74</MudTd>
+                            <MudTd Style="font-family:monospace">@context.F30</MudTd>
+                            <MudTd>@context.Examples</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+                    <MudText Typo="Typo.body2" Class="mb-1"><b>Mnemonics</b></MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
+                        <MudText Typo="Typo.body2">Sort by:</MudText>
+                        <MudSelect T="string" @bind-Value="_rebel6SortBy" Dense="true" Variant="Variant.Outlined"
+                                   Style="min-width:160px" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Mnemonic")">Mnemonic</MudSelectItem>
+                            <MudSelectItem Value="@("Format")">Format</MudSelectItem>
+                            <MudSelectItem Value="@("Opcode")">Opcode</MudSelectItem>
+                            <MudSelectItem Value="@("Func")">Func</MudSelectItem>
+                            <MudSelectItem Value="@("Category")">Category</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                    <MudTable Dense="true" Striped="true" Bordered="true" Elevation="0"
+                              Items="@SortedRebel6Instructions">
+                        <HeaderContent>
+                            <MudTh>Mnemonic</MudTh>
+                            <MudTh>Format</MudTh>
+                            <MudTh>Opcode</MudTh>
+                            <MudTh>Func</MudTh>
+                            <MudTh>Operands</MudTh>
+                            <MudTh>Category</MudTh>
+                            <MudTh>Description</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd Style="font-family:monospace">@context.Mnemonic</MudTd>
+                            <MudTd>@context.Format</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Opcode</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Func</MudTd>
+                            <MudTd Style="font-family:monospace">@context.Operands</MudTd>
+                            <MudTd>@context.Category</MudTd>
+                            <MudTd>@context.Description</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    <MudText Typo="Typo.body2" Class="mt-2">
+                        <b>Opcode groups:</b> <code>++xx</code> = ternary base; <code>+0xx</code> = binary base; <code>+-xx</code> = reserved extensions.
+                        2-trit opcodes (MST ≠ +) = long-immediate G/Y forms.
+                        <b>Comments:</b> #, ;, $, // strip to end-of-line.
+                    </MudText>
+                </MudExpansionPanel>
+            }
             @if (_isa == Isa.Rebel2v2)
             {
                 <MudExpansionPanel Text="REBEL-2v2 Instruction Set Reference (ISA v0.5)" Icon="@Icons.Material.Filled.Info">
@@ -314,15 +379,26 @@
 
     // ---- History ----
     private readonly List<AssemblyRecord> _history = new();
-    private readonly List<TernaryWorkbench.Rebel2Assembler.CsvParseError> _importErrors = new();
+    private readonly List<TernaryWorkbench.RebelAssembler.CsvParseError> _importErrors = new();
 
-    private string InputLabel => _mode == AssemblerMode.Assemble
-        ? "Assembly source (1–9 instructions, one per line)"
-        : "Machine code (one 10-trit word per line)";
+    // ---- REBEL-6 sort-by state ----
+    private string _rebel6SortBy = "Mnemonic";
 
-    private string InputPlaceholder => _mode == AssemblerMode.Assemble
-        ? "ADD.T X1, X2, X3\nNOP.T\nJAL.T X0, 0"
-        : "--+-+00+00\n-000000000";
+    private string InputLabel => (_isa, _mode) switch
+    {
+        (Isa.Rebel6, AssemblerMode.Assemble)    => "Assembly source (REBEL-6, one instruction per line)",
+        (Isa.Rebel6, AssemblerMode.Disassemble) => "Machine code (one 32-trit word per line)",
+        (_, AssemblerMode.Assemble)              => "Assembly source (1–9 instructions, one per line)",
+        _                                        => "Machine code (one 10-trit word per line)"
+    };
+
+    private string InputPlaceholder => (_isa, _mode) switch
+    {
+        (Isa.Rebel6, AssemblerMode.Assemble)    => "ADD.T X1, X2, X3\nBEQ.T X1, X0, -1\nLI.T X2, 42",
+        (Isa.Rebel6, AssemblerMode.Disassemble) => "0000+-0000+000000+000000000----++--\n...",
+        (_, AssemblerMode.Assemble)              => "ADD.T X1, X2, X3\nNOP.T\nJAL.T X0, 0",
+        _                                        => "--+-+00+00\n-000000000"
+    };
 
     // -------------------------------------------------------------------------
     // Event handlers
@@ -362,9 +438,12 @@
     {
         try
         {
-            var assembled = _isa == Isa.Rebel2v2
-                ? Rebel2v2Assembler.AssembleInstructions(_inputText)
-                : TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.AssembleInstructions(_inputText);
+            var assembled = _isa switch
+            {
+                Isa.Rebel2v2 => Rebel2v2Assembler.AssembleInstructions(_inputText),
+                Isa.Rebel6   => Rebel6Assembler.AssembleInstructions(_inputText),
+                _            => TernaryWorkbench.RebelAssembler.Rebel2Assembler.AssembleInstructions(_inputText)
+            };
             foreach (var inst in assembled)
             {
                 _results.Add(new ResultRow(inst.Address, inst.Assembly, inst.MachineCode));
@@ -388,17 +467,23 @@
         if (lines.Count == 0) return;
 
         bool anyErrors = false;
-        var addresses = new[] { "--", "-0", "-+", "0-", "00", "0+", "+-", "+0", "++" };
+        var addresses6 = Rebel6Assembler.AddressSpace;
+        var addresses2 = new[] { "--", "-0", "-+", "0-", "00", "0+", "+-", "+0", "++" };
 
         for (int i = 0; i < lines.Count; i++)
         {
             var code = lines[i];
-            var address = i < addresses.Length ? addresses[i] : $"[{i}]";
+            var address = _isa == Isa.Rebel6
+                ? (i < addresses6.Length ? addresses6[i] : $"[{i}]")
+                : (i < addresses2.Length ? addresses2[i] : $"[{i}]");
             try
             {
-                var mnemonic = _isa == Isa.Rebel2v2
-                    ? Rebel2v2Assembler.Disassemble(code)
-                    : TernaryWorkbench.Rebel2Assembler.Rebel2Assembler.Disassemble(code);
+                var mnemonic = _isa switch
+                {
+                    Isa.Rebel2v2 => Rebel2v2Assembler.Disassemble(code),
+                    Isa.Rebel6   => Rebel6Assembler.Disassemble(code),
+                    _            => TernaryWorkbench.RebelAssembler.Rebel2Assembler.Disassemble(code)
+                };
                 _results.Add(new ResultRow(address, mnemonic, code));
                 _history.Add(new AssemblyRecord(mnemonic, code, _isa, AssemblyDirection.Disassemble));
             }
@@ -427,7 +512,8 @@
     private async Task DownloadHistoryAsync()
     {
         string csv = AssemblyCsvSerializer.Serialize(_history);
-        await JS.InvokeVoidAsync("downloadFile", "rebel2_assembler_history.csv", csv);
+        var filename = $"rebel_assembler_{_isa.ToLowerInvariant().Replace("-", "")}_history.csv";
+        await JS.InvokeVoidAsync("downloadFile", filename, csv);
     }
 
     private async Task ImportCsvAsync(IBrowserFile file)
@@ -471,6 +557,131 @@
 
     private record FormatRef(string Name, string Field54, string Field98, string Examples);
     private record InstructionRef(string Mnemonic, string Opcode, string Operands, string FuncRd2, string Description);
+
+    // -------------------------------------------------------------------------
+    // REBEL-6 reference data
+    // -------------------------------------------------------------------------
+
+    private record FormatRef6(string Name, string F318, string F74, string F30, string Examples);
+    private record InstructionRef6(string Mnemonic, string Format, string Opcode, string Func, string Operands, string Category, string Description);
+
+    private IEnumerable<InstructionRef6> SortedRebel6Instructions => _rebel6SortBy switch
+    {
+        "Format"   => _instructionReference6.OrderBy(r => r.Format).ThenBy(r => r.Opcode).ThenBy(r => r.Func),
+        "Opcode"   => _instructionReference6.OrderBy(r => r.Opcode).ThenBy(r => r.Func),
+        "Func"     => _instructionReference6.OrderBy(r => r.Func).ThenBy(r => r.Mnemonic),
+        "Category" => _instructionReference6.OrderBy(r => r.Category).ThenBy(r => r.Mnemonic),
+        _          => _instructionReference6.OrderBy(r => r.Mnemonic)
+    };
+
+    private static readonly List<FormatRef6> _formatReference6 =
+    [
+        new("R", "rs1[6] | rs2[6] | rd1[6] | —[6]",     "func[4]",  "opcode[4]", "ADD.T, SLT.T, OR.T, AND.T, ADD, SLL"),
+        new("I", "rs1[6] | imm[6] | rd1[6] | —[6]",     "func[4]",  "opcode[4]", "ADDI.T, LW.T, JALR.T, ADDI, LW, LB"),
+        new("B", "rs1[6] | rs2[6] | —[6] | offset[6]",  "func[4]",  "opcode[4]", "BEQ.T, SW.T, BLT, SW, SB"),
+        new("D", "rs1[6] | rs2[6] | rd1[6] | rs3[6]",   "func[4]",  "opcode[4]", "MAJV.T, MINV.T"),
+        new("X", "imm1[6] | imm2[6] | rd1[6] | rd2[6]", "func[4]",  "opcode[4]", "LI2.T"),
+        new("G", "imm[24]",                              "rd1[6]",   "opcode[2]", "LWA.T, LI.T, JAL.T, AIPC.T"),
+        new("Y", "imm[18] | rs1[6]",                     "—[6]",     "opcode[2]", "SWA.T"),
+    ];
+
+    private static readonly List<InstructionRef6> _instructionReference6 =
+    [
+        // Ternary R-type ALU (opcode ++-- )
+        new("ADD.T",  "R", "++--", "--", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 + rs2"),
+        new("SUB.T",  "R", "++--", "-0", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 − rs2"),
+        new("SL.T",   "R", "++--", "-+", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 << rs2"),
+        new("SR.T",   "R", "++--", "0-", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 >> rs2"),
+        new("SLT.T",  "R", "++--", "00", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = (rs1 < rs2) ? +1 : 0"),
+        new("OR.T",   "R", "++--", "0+", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 OR rs2"),
+        new("XOR.T",  "R", "++--", "+-", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 XOR rs2"),
+        new("AND.T",  "R", "++--", "+0", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = rs1 AND rs2"),
+        new("CMP.T",  "R", "++-0", "--", "rd1, rs1, rs2", "Ternary ALU",   "rd1 = three-way compare: +1, 0, or -1"),
+        new("STI.T",  "R", "++-0", "-0", "rd1, rs1",      "Ternary ALU",   "rd1 = −rs1 (standard ternary inversion)"),
+        // Ternary I-type ALU (opcode ++-+)
+        new("ADDI.T", "I", "++-+", "--", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 + imm"),
+        new("SLI.T",  "I", "++-+", "-0", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 << shamt"),
+        new("SRI.T",  "I", "++-+", "-+", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 >> shamt"),
+        new("SLTI.T", "I", "++-+", "0-", "rd1, rs1, imm", "Ternary ALU",   "rd1 = (rs1 < imm) ? +1 : 0"),
+        new("ORI.T",  "I", "++-+", "00", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 OR imm"),
+        new("XORI.T", "I", "++-+", "0+", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 XOR imm"),
+        new("ANDI.T", "I", "++-+", "+-", "rd1, rs1, imm", "Ternary ALU",   "rd1 = rs1 AND imm"),
+        // Ternary I-type load/jump (opcode ++0-)
+        new("LW.T",   "I", "++0-", "--", "rd1, rs1, imm", "Ternary Load",  "rd1 = mem[rs1 + imm] (word)"),
+        new("LH.T",   "I", "++0-", "-0", "rd1, rs1, imm", "Ternary Load",  "rd1 = mem[rs1 + imm] (halfword)"),
+        new("LT.T",   "I", "++0-", "-+", "rd1, rs1, imm", "Ternary Load",  "rd1 = mem[rs1 + imm] (trit-word)"),
+        new("JALR.T", "I", "++0-", "0-", "rd1, rs1, imm", "Ternary Control","rd1 = PC+1; PC = rs1 + imm"),
+        // Ternary B-type branch (opcode ++00)
+        new("BEQ.T",  "B", "++00", "--", "rs1, rs2, offset", "Ternary Branch","branch if rs1 == rs2"),
+        new("BNE.T",  "B", "++00", "-0", "rs1, rs2, offset", "Ternary Branch","branch if rs1 ≠ rs2"),
+        new("BLT.T",  "B", "++00", "-+", "rs1, rs2, offset", "Ternary Branch","branch if rs1 < rs2"),
+        new("BGE.T",  "B", "++00", "0-", "rs1, rs2, offset", "Ternary Branch","branch if rs1 ≥ rs2"),
+        // Ternary B-type store (opcode ++0+)
+        new("SW.T",   "B", "++0+", "--", "rs1, rs2, offset", "Ternary Store", "mem[rs1 + offset] = rs2 (word)"),
+        new("SH.T",   "B", "++0+", "-0", "rs1, rs2, offset", "Ternary Store", "mem[rs1 + offset] = rs2 (halfword)"),
+        new("ST.T",   "B", "++0+", "-+", "rs1, rs2, offset", "Ternary Store", "mem[rs1 + offset] = rs2 (trit-word)"),
+        // Ternary D-type 3-source (opcode +++-)
+        new("MAJV.T", "D", "+++-", "--", "rd1, rs1, rs2, rs3", "Ternary ALU", "rd1 = majority(rs1, rs2, rs3)"),
+        new("MINV.T", "D", "+++-", "-0", "rd1, rs1, rs2, rs3", "Ternary ALU", "rd1 = minority(rs1, rs2, rs3)"),
+        // Ternary X-type dual-immediate (opcode +++0)
+        new("LI2.T",  "X", "+++0", "--", "rd1, rd2, imm1, imm2", "Ternary ALU", "rd1 = imm1;  rd2 = imm2"),
+        // Pseudo-instructions (encoded as ADDI.T)
+        new("NOP.T",  "I", "++-+", "--", "",        "Pseudo",          "no-op (ADDI.T X0, X0, 0)"),
+        new("MV.T",   "I", "++-+", "--", "rd1, rs1","Pseudo",          "rd1 = rs1 (ADDI.T rd1, rs1, 0)"),
+        // G/Y-type long-immediate (2-trit opcode)
+        new("LWA.T",  "G", "0+",   "—", "rd1, imm24",  "Ternary Load",  "rd1 = mem[imm24] (absolute word load)"),
+        new("LI.T",   "G", "00",   "—", "rd1, imm24",  "Ternary ALU",   "rd1 = imm24 (24-trit load immediate)"),
+        new("SWA.T",  "Y", "0-",   "—", "rs1, imm18",  "Ternary Store", "mem[imm18] = rs1 (absolute word store)"),
+        new("JAL.T",  "G", "-+",   "—", "rd1, imm24",  "Ternary Control","rd1 = PC+1; PC = PC + imm24"),
+        new("AIPC.T", "G", "-0",   "—", "rd1, imm24",  "Ternary Control","rd1 = PC + imm24"),
+        // Binary R-type ALU (opcode +0--)
+        new("ADD",    "R", "+0--", "--", "rd1, rs1, rs2", "Binary ALU",  "rd1 = rs1 + rs2"),
+        new("SUB",    "R", "+0--", "-0", "rd1, rs1, rs2", "Binary ALU",  "rd1 = rs1 − rs2"),
+        new("SLL",    "R", "+0--", "-+", "rd1, rs1, rs2", "Binary ALU",  "rd1 = rs1 << rs2"),
+        new("SRL",    "R", "+0--", "0-", "rd1, rs1, rs2", "Binary ALU",  "logical shift right"),
+        new("SRA",    "R", "+0--", "00", "rd1, rs1, rs2", "Binary ALU",  "arithmetic shift right"),
+        new("SLTU",   "R", "+0--", "0+", "rd1, rs1, rs2", "Binary ALU",  "rd1 = (rs1 <u rs2) ? 1 : 0"),
+        new("OR",     "R", "+0--", "+-", "rd1, rs1, rs2", "Binary ALU",  "bitwise OR"),
+        new("XOR",    "R", "+0--", "+0", "rd1, rs1, rs2", "Binary ALU",  "bitwise XOR"),
+        new("AND",    "R", "+0--", "++", "rd1, rs1, rs2", "Binary ALU",  "bitwise AND"),
+        // Binary I-type ALU (opcode +0-0)
+        new("ADDI",   "I", "+0-0", "--", "rd1, rs1, imm", "Binary ALU",  "rd1 = rs1 + imm"),
+        new("SLLI",   "I", "+0-0", "-0", "rd1, rs1, imm", "Binary ALU",  "logical left shift immediate"),
+        new("SRLI",   "I", "+0-0", "-+", "rd1, rs1, imm", "Binary ALU",  "logical right shift immediate"),
+        new("SRAI",   "I", "+0-0", "0-", "rd1, rs1, imm", "Binary ALU",  "arithmetic right shift immediate"),
+        new("SLTIU",  "I", "+0-0", "00", "rd1, rs1, imm", "Binary ALU",  "rd1 = (rs1 <u imm) ? 1 : 0"),
+        new("ORI",    "I", "+0-0", "0+", "rd1, rs1, imm", "Binary ALU",  "bitwise OR immediate"),
+        new("XORI",   "I", "+0-0", "+-", "rd1, rs1, imm", "Binary ALU",  "bitwise XOR immediate"),
+        new("ANDI",   "I", "+0-0", "+0", "rd1, rs1, imm", "Binary ALU",  "bitwise AND immediate"),
+        // Binary I-type load (opcode +0-+)
+        new("LW",     "I", "+0-+", "--", "rd1, rs1, imm", "Binary Load", "load word"),
+        new("LH",     "I", "+0-+", "-0", "rd1, rs1, imm", "Binary Load", "load halfword signed"),
+        new("LB",     "I", "+0-+", "-+", "rd1, rs1, imm", "Binary Load", "load byte signed"),
+        new("LHU",    "I", "+0-+", "0-", "rd1, rs1, imm", "Binary Load", "load halfword unsigned"),
+        new("LBU",    "I", "+0-+", "00", "rd1, rs1, imm", "Binary Load", "load byte unsigned"),
+        // Binary B-type unsigned branch (opcode +00-)
+        new("BLTU",   "B", "+00-", "--", "rs1, rs2, offset", "Binary Branch","branch if rs1 <u rs2"),
+        new("BGEU",   "B", "+00-", "-0", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≥u rs2"),
+        // Binary B-type signed branch (opcode +00+)
+        new("BEQ",    "B", "+00+", "--", "rs1, rs2, offset", "Binary Branch","branch if rs1 == rs2"),
+        new("BNE",    "B", "+00+", "-0", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≠ rs2"),
+        new("BLT",    "B", "+00+", "-+", "rs1, rs2, offset", "Binary Branch","branch if rs1 < rs2"),
+        new("BGE",    "B", "+00+", "0-", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≥ rs2"),
+        // Binary B-type store (opcode +000)
+        new("SW",     "B", "+000", "--", "rs1, rs2, offset", "Binary Store", "store word"),
+        new("SH",     "B", "+000", "-0", "rs1, rs2, offset", "Binary Store", "store halfword"),
+        new("SB",     "B", "+000", "-+", "rs1, rs2, offset", "Binary Store", "store byte"),
+        // Binary control flow (opcode +0+-)
+        new("JAL",    "I", "+0+-", "--", "rd1, imm", "Binary Control", "rd1 = PC+1; PC = PC + imm"),
+        new("JALR",   "I", "+0+-", "-0", "rd1, rs1, imm", "Binary Control","rd1 = PC+1; PC = rs1 + imm"),
+        // Binary upper immediate (opcode +0+0)
+        new("LUI",    "I", "+0+0", "--", "rd1, imm", "Binary ALU",    "rd1 = imm << 12"),
+        new("AUIPC",  "I", "+0+0", "-0", "rd1, imm", "Binary Control","rd1 = PC + (imm << 12)"),
+        // Binary system (opcode +0++)
+        new("FENCE",  "I", "+0++", "--", "",          "Binary System", "memory fence"),
+        new("ECALL",  "I", "+0++", "-0", "",          "Binary System", "environment call"),
+        new("EBREAK", "I", "+0++", "-+", "",          "Binary System", "debug breakpoint"),
+    ];
 
     private static readonly List<FormatRef> _formatReference =
     [

@@ -1,7 +1,7 @@
-using TernaryWorkbench.Rebel2Assembler.Assembly.Models;
-using static TernaryWorkbench.Rebel2Assembler.Assembly.InstructionSet;
+using TernaryWorkbench.RebelAssembler.Assembly.Models;
+using static TernaryWorkbench.RebelAssembler.Assembly.InstructionSet;
 
-namespace TernaryWorkbench.Rebel2Assembler.Assembly;
+namespace TernaryWorkbench.RebelAssembler.Assembly;
 
 /// <summary>
 /// ISA v0.5 instruction patterns for the REBEL-2v2 assembler.

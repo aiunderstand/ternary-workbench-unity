@@ -1,7 +1,7 @@
-using TernaryWorkbench.Rebel2Assembler.Assembly.Models;
-using static TernaryWorkbench.Rebel2Assembler.Assembly.InstructionSet;
+using TernaryWorkbench.RebelAssembler.Assembly.Models;
+using static TernaryWorkbench.RebelAssembler.Assembly.InstructionSet;
 
-namespace TernaryWorkbench.Rebel2Assembler.Assembly;
+namespace TernaryWorkbench.RebelAssembler.Assembly;
 
 internal static class InstructionDisassembler
 {
