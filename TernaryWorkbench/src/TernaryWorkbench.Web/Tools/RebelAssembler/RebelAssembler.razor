@@ -1,13 +1,13 @@
-@page "/rebel2-assembler"
+@page "/rebel-assembler"
 @using TernaryWorkbench.RebelAssembler
 @using TernaryWorkbench.RebelAssembler.Assembly.Models
 @using System.IO
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
-<PageTitle>Ternary Workbench — REBEL-2 Assembler</PageTitle>
+<PageTitle>Ternary Workbench — REBEL Assembler</PageTitle>
 
-<MudText Typo="Typo.h5" GutterBottom="true">REBEL-2 Assembler / Disassembler</MudText>
+<MudText Typo="Typo.h5" GutterBottom="true">REBEL Assembler / Disassembler</MudText>
 
 <MudGrid Spacing="3">
 
@@ -362,8 +362,12 @@
                         </RowTemplate>
                     </MudTable>
                     <MudText Typo="Typo.body2" Class="mt-2">
-                        <b>Opcode groups (by last 2 trits):</b> <code>xx00</code> = Base Ternary (729 instr.);
-                        <code>xx-0</code> = Base Binary / RV32I (729 instr.); <code>xx+0</code> = Extensions (729 instr., reserved).
+                        <b>Opcode groups (by last 2 trits):</b> <code>xx00</code> = Base Ternary (729 slots);
+                        <code>xx-0</code> = Base Binary / RV32I (729 slots); <code>xx+0</code> = Extensions (729 slots, reserved).
+                        The upper 2 trits encode the instruction category — same in both ternary and binary:
+                        <code>00</code>=I-type ALU, <code>0-</code>=Branch, <code>0+</code>=Store,
+                        <code>--</code>=R-type ALU, <code>-+</code>=I-type Load, <code>+-</code>=D/Control, <code>+0</code>=X/Imm, <code>++</code>=System.
+                        <b>Func:</b> upper 2 trits always <code>00</code>; lower 2 trits (LST) shown in table discriminate the instruction.
                         <b>2-trit long-immediate (last trit ≠ 0):</b>
                         <code>++</code> LWA.T, <code>0+</code> LI.T, <code>-+</code> SWA.T,
                         <code>+-</code> JAL.T, <code>0-</code> AIPC.T; <code>--</code> <i>reserved</i>.
@@ -696,7 +700,7 @@
     [
         new("Radix",             "Balanced ternary",  "Balanced ternary"),
         new("Instruction width", "10 trits",          "32 trits"),
-        new("Instruction count", "9",                 "63+ (729 ternary base, 729 binary base)"),
+        new("Instruction count", "23 + 3 pseudo (9 opcode groups)", "36 ternary + 27 binary + 2 pseudo = 65"),
         new("Register count",    "9 (X-4 … X4)",      "729 (X-364 … X364; X0 = zero)"),
         new("Register width",    "2 trits",           "24 trits"),
         new("Operand count",     "2–4",               "2–4"),
@@ -777,43 +781,28 @@
         new("OR",     "R", "---0", "+-", "rd1, rs1, rs2", "Binary ALU",  "bitwise OR"),
         new("XOR",    "R", "---0", "+0", "rd1, rs1, rs2", "Binary ALU",  "bitwise XOR"),
         new("AND",    "R", "---0", "++", "rd1, rs1, rs2", "Binary ALU",  "bitwise AND"),
-        // Binary I-type ALU (opcode -0-0)
-        new("ADDI",   "I", "-0-0", "--", "rd1, rs1, imm", "Binary ALU",  "rd1 = rs1 + imm"),
-        new("SLLI",   "I", "-0-0", "-0", "rd1, rs1, imm", "Binary ALU",  "logical left shift immediate"),
-        new("SRLI",   "I", "-0-0", "-+", "rd1, rs1, imm", "Binary ALU",  "logical right shift immediate"),
-        new("SRAI",   "I", "-0-0", "0-", "rd1, rs1, imm", "Binary ALU",  "arithmetic right shift immediate"),
-        new("SLTIU",  "I", "-0-0", "00", "rd1, rs1, imm", "Binary ALU",  "rd1 = (rs1 <u imm) ? 1 : 0"),
-        new("ORI",    "I", "-0-0", "0+", "rd1, rs1, imm", "Binary ALU",  "bitwise OR immediate"),
-        new("XORI",   "I", "-0-0", "+-", "rd1, rs1, imm", "Binary ALU",  "bitwise XOR immediate"),
-        new("ANDI",   "I", "-0-0", "+0", "rd1, rs1, imm", "Binary ALU",  "bitwise AND immediate"),
+        // Binary I-type ALU (opcode 00-0 — parallel to ternary 00xx I-type ALU)
+        new("ADDI",   "I", "00-0", "--", "rd1, rs1, imm", "Binary ALU",  "rd1 = rs1 + imm"),
+        new("SLLI",   "I", "00-0", "-0", "rd1, rs1, imm", "Binary ALU",  "logical left shift immediate"),
+        new("SRLI",   "I", "00-0", "-+", "rd1, rs1, imm", "Binary ALU",  "logical right shift immediate"),
+        new("SRAI",   "I", "00-0", "0-", "rd1, rs1, imm", "Binary ALU",  "arithmetic right shift immediate"),
+        new("SLTIU",  "I", "00-0", "00", "rd1, rs1, imm", "Binary ALU",  "rd1 = (rs1 <u imm) ? 1 : 0"),
+        new("ORI",    "I", "00-0", "0+", "rd1, rs1, imm", "Binary ALU",  "bitwise OR immediate"),
+        new("XORI",   "I", "00-0", "+-", "rd1, rs1, imm", "Binary ALU",  "bitwise XOR immediate"),
+        new("ANDI",   "I", "00-0", "+0", "rd1, rs1, imm", "Binary ALU",  "bitwise AND immediate"),
         // Binary I-type load (opcode -+-0)
         new("LW",     "I", "-+-0", "--", "rd1, rs1, imm", "Binary Load", "load word"),
         new("LH",     "I", "-+-0", "-0", "rd1, rs1, imm", "Binary Load", "load halfword signed"),
         new("LB",     "I", "-+-0", "-+", "rd1, rs1, imm", "Binary Load", "load byte signed"),
         new("LHU",    "I", "-+-0", "0-", "rd1, rs1, imm", "Binary Load", "load halfword unsigned"),
         new("LBU",    "I", "-+-0", "00", "rd1, rs1, imm", "Binary Load", "load byte unsigned"),
-        // Binary B-type unsigned branch (opcode 0--0)
-        new("BLTU",   "B", "0--0", "--", "rs1, rs2, offset", "Binary Branch","branch if rs1 <u rs2"),
-        new("BGEU",   "B", "0--0", "-0", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≥u rs2"),
-        // Binary B-type signed branch (opcode 0+-0)
-        new("BEQ",    "B", "0+-0", "--", "rs1, rs2, offset", "Binary Branch","branch if rs1 == rs2"),
-        new("BNE",    "B", "0+-0", "-0", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≠ rs2"),
-        new("BLT",    "B", "0+-0", "-+", "rs1, rs2, offset", "Binary Branch","branch if rs1 < rs2"),
-        new("BGE",    "B", "0+-0", "0-", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≥ rs2"),
-        // Binary B-type store (opcode 00-0)
-        new("SW",     "B", "00-0", "--", "rs1, rs2, offset", "Binary Store", "store word"),
-        new("SH",     "B", "00-0", "-0", "rs1, rs2, offset", "Binary Store", "store halfword"),
-        new("SB",     "B", "00-0", "-+", "rs1, rs2, offset", "Binary Store", "store byte"),
-        // Binary control flow (opcode +--0)
-        new("JAL",    "I", "+--0", "--", "rd1, imm", "Binary Control", "rd1 = PC+1; PC = PC + imm"),
-        new("JALR",   "I", "+--0", "-0", "rd1, rs1, imm", "Binary Control","rd1 = PC+1; PC = rs1 + imm"),
-        // Binary upper immediate (opcode +0-0)
-        new("LUI",    "I", "+0-0", "--", "rd1, imm", "Binary ALU",    "rd1 = imm << 12"),
-        new("AUIPC",  "I", "+0-0", "-0", "rd1, imm", "Binary Control","rd1 = PC + (imm << 12)"),
-        // Binary system (opcode ++-0)
-        new("FENCE",  "I", "++-0", "--", "",          "Binary System", "memory fence"),
-        new("ECALL",  "I", "++-0", "-0", "",          "Binary System", "environment call"),
-        new("EBREAK", "I", "++-0", "-+", "",          "Binary System", "debug breakpoint"),
+        // Binary B-type branch (opcode 0--0 — unsigned only, parallel to ternary 0-xx branch)
+        new("BLTU",   "B", "0--0", "0+", "rs1, rs2, offset", "Binary Branch","branch if rs1 <u rs2"),
+        new("BGEU",   "B", "0--0", "+-", "rs1, rs2, offset", "Binary Branch","branch if rs1 ≥u rs2"),
+        // Binary B-type store (opcode 0+-0 — parallel to ternary 0+xx store)
+        new("SW",     "B", "0+-0", "--", "rs1, rs2, offset", "Binary Store", "store word"),
+        new("SH",     "B", "0+-0", "-0", "rs1, rs2, offset", "Binary Store", "store halfword"),
+        new("SB",     "B", "0+-0", "-+", "rs1, rs2, offset", "Binary Store", "store byte"),
     ];
 
     private static readonly List<FormatRef> _formatReference =

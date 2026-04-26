@@ -13,6 +13,16 @@ namespace TernaryWorkbench.RebelAssembler.Assembly;
 /// <c>xx00</c> = Base Ternary (R/I/B/D/X formats);
 /// <c>xx-0</c> = Base Binary (RV32I compatible);
 /// <c>xx+0</c> = Extensions (reserved for future RIBGXDY instructions).
+/// The upper 2 trits (t3 t2) encode the instruction category; same t3t2 means the
+/// same category in both ternary and binary groups:
+/// <c>00</c>=I-type ALU, <c>0-</c>=Branch, <c>0+</c>=Store,
+/// <c>--</c>=R-type ALU, <c>-+</c>=I-type Load,
+/// <c>+-</c>=D/Control, <c>+0</c>=X/Upper-imm, <c>++</c>=reserved/System.
+/// </para>
+/// <para>
+/// Func field convention: func[3:2] (upper 2 trits) are always <c>00</c>;
+/// func[1:0] (lower 2 trits, LST) discriminate instructions within an opcode group.
+/// The UI and documentation show only the 2 discriminating LST trits.
 /// </para>
 /// <para>
 /// 2-trit opcode (last trit ≠ 0) — long-immediate formats:
@@ -233,16 +243,16 @@ internal static class InstructionSet6
             { "AND",     new InstructionPattern("AND",  "---0", [Rd1, Rs1, Rs2], Func4("00++")) },
 
             // ----------------------------------------------------------------
-            // I-type binary ALU  opcode=-0-0  (Imm → rs2 slot)
+            // I-type binary ALU  opcode=00-0  (Imm → rs2 slot; parallel to ternary 00)
             // ----------------------------------------------------------------
-            { "ADDI",    new InstructionPattern("ADDI",  "-0-0", [Rd1, Rs1, Imm], Func4("00--")) },
-            { "SLLI",    new InstructionPattern("SLLI",  "-0-0", [Rd1, Rs1, Imm], Func4("00-0")) },
-            { "SRLI",    new InstructionPattern("SRLI",  "-0-0", [Rd1, Rs1, Imm], Func4("00-+")) },
-            { "SRAI",    new InstructionPattern("SRAI",  "-0-0", [Rd1, Rs1, Imm], Func4("000-")) },
-            { "SLTIU",   new InstructionPattern("SLTIU", "-0-0", [Rd1, Rs1, Imm], Func4("0000")) },
-            { "ORI",     new InstructionPattern("ORI",   "-0-0", [Rd1, Rs1, Imm], Func4("000+")) },
-            { "XORI",    new InstructionPattern("XORI",  "-0-0", [Rd1, Rs1, Imm], Func4("00+-")) },
-            { "ANDI",    new InstructionPattern("ANDI",  "-0-0", [Rd1, Rs1, Imm], Func4("00+0")) },
+            { "ADDI",    new InstructionPattern("ADDI",  "00-0", [Rd1, Rs1, Imm], Func4("00--")) },
+            { "SLLI",    new InstructionPattern("SLLI",  "00-0", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "SRLI",    new InstructionPattern("SRLI",  "00-0", [Rd1, Rs1, Imm], Func4("00-+")) },
+            { "SRAI",    new InstructionPattern("SRAI",  "00-0", [Rd1, Rs1, Imm], Func4("000-")) },
+            { "SLTIU",   new InstructionPattern("SLTIU", "00-0", [Rd1, Rs1, Imm], Func4("0000")) },
+            { "ORI",     new InstructionPattern("ORI",   "00-0", [Rd1, Rs1, Imm], Func4("000+")) },
+            { "XORI",    new InstructionPattern("XORI",  "00-0", [Rd1, Rs1, Imm], Func4("00+-")) },
+            { "ANDI",    new InstructionPattern("ANDI",  "00-0", [Rd1, Rs1, Imm], Func4("00+0")) },
 
             // ----------------------------------------------------------------
             // I-type binary load  opcode=-+-0  (Imm → rs2 slot)
@@ -254,59 +264,24 @@ internal static class InstructionSet6
             { "LBU",     new InstructionPattern("LBU", "-+-0", [Rd1, Rs1, Imm], Func4("0000")) },
 
             // ----------------------------------------------------------------
-            // B-type binary unsigned branch  opcode=0--0  (Offset → rd2 slot)
+            // B-type binary branch  opcode=0--0  (unsigned only; parallel to ternary 0-xx00 branch group)
+            // BLTU=000+ BGEU=00+-
             // ----------------------------------------------------------------
             { "BLTU",    new InstructionPattern("BLTU", "0--0", [Rs1, Rs2, Offset],
-                Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
+                Merge(Func4("000+"), Fixed(Rd1, DefaultField))) },
             { "BGEU",    new InstructionPattern("BGEU", "0--0", [Rs1, Rs2, Offset],
-                Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
+                Merge(Func4("00+-"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // B-type binary signed branch  opcode=0+-0  (Offset → rd2 slot)
+            // B-type binary store  opcode=0+-0  (Offset → rd2 slot; parallel to ternary 0+xx00 store)
             // ----------------------------------------------------------------
-            { "BEQ",     new InstructionPattern("BEQ",  "0+-0", [Rs1, Rs2, Offset],
+            { "SW",      new InstructionPattern("SW",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "BNE",     new InstructionPattern("BNE",  "0+-0", [Rs1, Rs2, Offset],
+            { "SH",      new InstructionPattern("SH",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "BLT",     new InstructionPattern("BLT",  "0+-0", [Rs1, Rs2, Offset],
-                Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
-            { "BGE",     new InstructionPattern("BGE",  "0+-0", [Rs1, Rs2, Offset],
-                Merge(Func4("000-"), Fixed(Rd1, DefaultField))) },
-
-            // ----------------------------------------------------------------
-            // B-type binary store  opcode=00-0  (Offset → rd2 slot)
-            // ----------------------------------------------------------------
-            { "SW",      new InstructionPattern("SW",  "00-0", [Rs1, Rs2, Offset],
-                Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "SH",      new InstructionPattern("SH",  "00-0", [Rs1, Rs2, Offset],
-                Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "SB",      new InstructionPattern("SB",  "00-0", [Rs1, Rs2, Offset],
+            { "SB",      new InstructionPattern("SB",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
 
-            // ----------------------------------------------------------------
-            // Binary control flow  opcode=+--0
-            // ----------------------------------------------------------------
-            { "JAL",     new InstructionPattern("JAL",  "+--0", [Rd1, Imm],
-                Merge(Func4("00--"), Fixed(Rs1, DefaultField))) },
-            { "JALR",    new InstructionPattern("JALR", "+--0", [Rd1, Rs1, Imm], Func4("00-0")) },
-
-            // ----------------------------------------------------------------
-            // Binary upper immediate  opcode=+0-0
-            // ----------------------------------------------------------------
-            { "LUI",     new InstructionPattern("LUI",   "+0-0", [Rd1, Imm],
-                Merge(Func4("00--"), Fixed(Rs1, DefaultField))) },
-            { "AUIPC",   new InstructionPattern("AUIPC", "+0-0", [Rd1, Imm],
-                Merge(Func4("00-0"), Fixed(Rs1, DefaultField))) },
-
-            // ----------------------------------------------------------------
-            // Binary system  opcode=++-0
-            // ----------------------------------------------------------------
-            { "FENCE",   new InstructionPattern("FENCE",  "++-0", [],
-                Merge(Func4("00--"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
-            { "ECALL",   new InstructionPattern("ECALL",  "++-0", [],
-                Merge(Func4("00-0"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
-            { "EBREAK",  new InstructionPattern("EBREAK", "++-0", [],
-                Merge(Func4("00-+"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
         };
 
     // -------------------------------------------------------------------------

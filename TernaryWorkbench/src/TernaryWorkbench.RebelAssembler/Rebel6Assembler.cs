@@ -11,7 +11,7 @@ namespace TernaryWorkbench.RebelAssembler;
 /// <list type="bullet">
 ///   <item>Instructions are 32 trits wide (vs 10 trits in REBEL-2).</item>
 ///   <item>729 registers (6-trit address, vs 9 registers in REBEL-2); X0 hardwired zero.</item>
-///   <item>63+ instructions (vs 9 in REBEL-2), with 8 instruction formats: R, I, B, D, X (4-trit opcode), G, Y (2-trit opcode), L (RV32I pass-through).</item>
+///   <item>65 instruction patterns: 36 ternary-native + 27 binary (RV32I-compatible) + 2 pseudo (NOP.T, MV.T). 8 instruction formats: R, I, B, D, X (4-trit opcode), G, Y (2-trit opcode), L (RV32I pass-through).</item>
 ///   <item>Dedicated 4-trit func field (not encoded in Rd2 as in REBEL-2).</item>
 ///   <item>Register width 24 trits (vs 2 trits in REBEL-2).</item>
 ///   <item><b>NOP.T</b> encodes as all-zero 32 trits (opcode <c>0000</c>, func <c>0000</c>).</item>

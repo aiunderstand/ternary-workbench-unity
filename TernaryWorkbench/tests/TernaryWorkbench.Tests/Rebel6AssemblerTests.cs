@@ -54,13 +54,8 @@ public class Rebel6AssemblerTests
     [InlineData("SWA.T X1, 1",            "00000+00000000000000000000000+-+")]
     // Binary R-type  opcode=---0
     [InlineData("ADD X1, X2, X3",         "0000+-0000+000000+00000000-----0")]
-    // Binary I-type  opcode=-0-0
-    [InlineData("ADDI X1, X2, X3",        "0000+-0000+000000+00000000---0-0")]
-    // Binary B-type  opcode=0+-0
-    [InlineData("BEQ X1, X2, 0",          "00000+0000+-00000000000000--0+-0")]
-    // Binary system  opcode=++-0
-    [InlineData("FENCE",                  "00000000000000000000000000--++-0")]
-    [InlineData("ECALL",                  "00000000000000000000000000-0++-0")]
+    // Binary I-type  opcode=00-0  (parallel to ternary 00xx I-type ALU)
+    [InlineData("ADDI X1, X2, X3",        "0000+-0000+000000+00000000--00-0")]
     public void Translate_SingleInstruction_ProducesMachineCode(string assembly, string expected)
     {
         Asm.Translate(assembly).Should().Be(expected);
@@ -141,7 +136,6 @@ public class Rebel6AssemblerTests
     [InlineData("00000+00000000000000000000000+-+",  "SWA.T X1, 1")]
     // Binary
     [InlineData("0000+-0000+000000+00000000-----0",  "ADD X1, X2, X3")]
-    [InlineData("00000000000000000000000000--++-0",  "FENCE")]
     public void Disassemble_MachineCode_ReturnsCanonicalMnemonic(string machineCode, string expected)
     {
         Asm.Disassemble(machineCode).Should().Be(expected);
@@ -212,7 +206,7 @@ public class Rebel6AssemblerTests
     [InlineData("OR X1, X2, X3")]
     [InlineData("XOR X1, X2, X3")]
     [InlineData("AND X1, X2, X3")]
-    // Binary I-type (opcode -0-0)
+    // Binary I-type (opcode 00-0)
     [InlineData("ADDI X1, X2, X3")]
     [InlineData("SLLI X1, X2, X3")]
     [InlineData("SRLI X1, X2, X3")]
@@ -227,26 +221,13 @@ public class Rebel6AssemblerTests
     [InlineData("LB X1, X2, X3")]
     [InlineData("LHU X1, X2, X3")]
     [InlineData("LBU X1, X2, X3")]
-    // Binary branch (opcode 0+-0 signed, 0--0 unsigned)
-    [InlineData("BEQ X1, X2, 0")]
-    [InlineData("BNE X1, X2, 0")]
-    [InlineData("BLT X1, X2, 0")]
-    [InlineData("BGE X1, X2, 0")]
+    // Binary branch (opcode 0--0 — unsigned only)
     [InlineData("BLTU X1, X2, 0")]
     [InlineData("BGEU X1, X2, 0")]
-    // Binary store (opcode 00-0)
+    // Binary store (opcode 0+-0)
     [InlineData("SW X1, X2, 0")]
     [InlineData("SH X1, X2, 0")]
     [InlineData("SB X1, X2, 0")]
-    // Binary control / upper-imm (opcode +--0)
-    [InlineData("JAL X1, X3")]
-    [InlineData("JALR X1, X2, X3")]
-    [InlineData("LUI X1, X3")]
-    [InlineData("AUIPC X1, X3")]
-    // Binary system (opcode ++-0)
-    [InlineData("FENCE")]
-    [InlineData("ECALL")]
-    [InlineData("EBREAK")]
     public void RoundTrip_Assemble_Disassemble_Reassemble_SameMachineCode(string assembly)
     {
         var machineCode  = Asm.Translate(assembly);
@@ -535,15 +516,4 @@ public class Rebel6AssemblerTests
         ternaryAdd.Should().NotBe(binaryAdd);
     }
 
-    [Fact]
-    public void BinarySystemInstructions_AllDataFieldsZero()
-    {
-        foreach (var mnemonic in new[] { "FENCE", "ECALL", "EBREAK" })
-        {
-            var mc = Asm.Translate(mnemonic);
-            mc[..24].Should().Be(new string('0', 24),
-                because: $"{mnemonic} is SYS-format: all register fields fixed to zero");
-            mc[28..32].Should().Be("++-0", because: $"{mnemonic} uses binary-system opcode ++-0");
-        }
-    }
 }
