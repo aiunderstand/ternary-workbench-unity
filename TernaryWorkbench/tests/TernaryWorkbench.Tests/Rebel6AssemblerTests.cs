@@ -12,8 +12,13 @@ namespace TernaryWorkbench.Tests;
 ///   [31:26] rs1 (6T) | [25:20] rs2 (6T) | [19:14] rd1 (6T) |
 ///   [13:8]  rd2 (6T) | [7:4]   func (4T) | [3:0]   opcode (4T)
 ///
-/// G-type (2-trit opcode, MST ≠ '+'):  imm(24) | rd1(6)          | opcode(2)
-/// Y-type (2-trit opcode, MST ≠ '+'):  imm(18) | rs1(6) | 0*(6)  | opcode(2)
+/// Opcode groups (by last 2 trits): xx00 = Base Ternary; xx-0 = Base Binary; xx+0 = Extensions.
+/// Last trit == '0' → 4-trit opcode; last trit ≠ '0' → 2-trit long-immediate (G/Y type).
+///
+/// G-type (2-trit opcode): imm[23:12](12) | rd1(6) | imm[11:0](12) | opc(2)
+/// Y-type (2-trit opcode): rs1(6) | imm[23:0](24) | opc(2)
+///
+/// NOP.T encodes as all-zero 32 trits (opcode 0000, func 0000 = ADDI.T X0, X0, 0).
 ///
 /// Register encoding (selected):
 ///   X0 = "000000"  X1 = "00000+"  X2 = "0000+-"
@@ -27,35 +32,35 @@ public class Rebel6AssemblerTests
     // =========================================================================
 
     [Theory]
-    // R-type  opcode=++--  func discriminates the operation
-    [InlineData("ADD.T X1, X2, X3",        "0000+-0000+000000+00000000--++--")]
-    [InlineData("SUB.T X1, X2, X3",        "0000+-0000+000000+00000000-0++--")]
-    [InlineData("OR.T X1, X2, X3",         "0000+-0000+000000+000000000+++--")] // func=000+
-    // I-type  opcode=++-+  Imm encoded in rs2 slot
-    [InlineData("ADDI.T X1, X2, X3",       "0000+-0000+000000+00000000--++-+")]
-    [InlineData("ADDI.T X1, X2, 3",        "0000+-0000+000000+00000000--++-+")]  // 3 == X3
-    // NOP.T and MV.T (pseudo-instructions sharing opcode ++-+ and func 00--)
-    [InlineData("NOP.T",                   "00000000000000000000000000--++-+")]
-    [InlineData("MV.T X1, X2",            "0000+-00000000000+00000000--++-+")]
-    // B-type branch  opcode=++00  offset in rd2 slot
-    [InlineData("BEQ.T X1, X2, 0",        "00000+0000+-00000000000000--++00")]
-    // D-type (3 sources + dest)  opcode=+++-
-    [InlineData("MAJV.T X1, X2, X3, X4",  "0000+-0000+000000+0000++00--+++-")]
-    // X-type (dual dest + dual imm)  opcode=+++0
-    [InlineData("LI2.T X1, X2, X3, X4",   "0000+00000++00000+0000+-00--+++0")]
-    // G-type (24-trit immediate)  opcode=00
-    [InlineData("LI.T X1, 1",             "00000000000000000000000+00000+00")]
-    // Y-type (18-trit immediate + source)  opcode=0-
-    [InlineData("SWA.T X1, 1",            "00000000000000000+00000+0000000-")]
-    // Binary R-type  opcode=+0--
-    [InlineData("ADD X1, X2, X3",         "0000+-0000+000000+00000000--+0--")]
-    // Binary I-type  opcode=+0-0
-    [InlineData("ADDI X1, X2, X3",        "0000+-0000+000000+00000000--+0-0")]
-    // Binary B-type  opcode=+00+
-    [InlineData("BEQ X1, X2, 0",          "00000+0000+-00000000000000--+00+")]
-    // Binary system  opcode=+0++
-    [InlineData("FENCE",                  "00000000000000000000000000--+0++")]
-    [InlineData("ECALL",                  "00000000000000000000000000-0+0++")]
+    // R-type  opcode=--00  func discriminates the operation
+    [InlineData("ADD.T X1, X2, X3",        "0000+-0000+000000+00000000----00")]
+    [InlineData("SUB.T X1, X2, X3",        "0000+-0000+000000+00000000-0--00")]
+    [InlineData("OR.T X1, X2, X3",         "0000+-0000+000000+000000000+--00")] // func=000+
+    // I-type  opcode=0000  Imm encoded in rs2 slot; func=0000 for ADDI.T
+    [InlineData("ADDI.T X1, X2, X3",       "0000+-0000+000000+00000000000000")]
+    [InlineData("ADDI.T X1, X2, 3",        "0000+-0000+000000+00000000000000")]  // 3 == X3
+    // NOP.T = all-zero 32 trits; MV.T (pseudo sharing opcode 0000 and func 0000)
+    [InlineData("NOP.T",                   "00000000000000000000000000000000")]
+    [InlineData("MV.T X1, X2",            "0000+-00000000000+00000000000000")]
+    // B-type branch  opcode=0-00  offset in rd2 slot
+    [InlineData("BEQ.T X1, X2, 0",        "00000+0000+-00000000000000--0-00")]
+    // D-type (3 sources + dest)  opcode=+-00
+    [InlineData("MAJV.T X1, X2, X3, X4",  "0000+-0000+000000+0000++00--+-00")]
+    // X-type (dual dest + dual imm)  opcode=+000
+    [InlineData("LI2.T X1, X2, X3, X4",   "0000+00000++00000+0000+-00--+000")]
+    // G-type (24-trit immediate split around rd1)  opcode=0+
+    [InlineData("LI.T X1, 1",             "00000000000000000+00000000000+0+")]
+    // Y-type (rs1 first, 24-trit immediate)  opcode=-+
+    [InlineData("SWA.T X1, 1",            "00000+00000000000000000000000+-+")]
+    // Binary R-type  opcode=---0
+    [InlineData("ADD X1, X2, X3",         "0000+-0000+000000+00000000-----0")]
+    // Binary I-type  opcode=-0-0
+    [InlineData("ADDI X1, X2, X3",        "0000+-0000+000000+00000000---0-0")]
+    // Binary B-type  opcode=0+-0
+    [InlineData("BEQ X1, X2, 0",          "00000+0000+-00000000000000--0+-0")]
+    // Binary system  opcode=++-0
+    [InlineData("FENCE",                  "00000000000000000000000000--++-0")]
+    [InlineData("ECALL",                  "00000000000000000000000000-0++-0")]
     public void Translate_SingleInstruction_ProducesMachineCode(string assembly, string expected)
     {
         Asm.Translate(assembly).Should().Be(expected);
@@ -66,35 +71,49 @@ public class Rebel6AssemblerTests
     // =========================================================================
 
     [Fact]
-    public void LiT_X0_Zero_IsAllZeros()
+    public void NopT_IsAllZeros()
     {
-        // G-type: imm24(all-zero) | rd1(X0=000000) | opcode(00)
-        Asm.Translate("LI.T X0, 0").Should().Be(new string('0', 32));
+        // NOP.T = ADDI.T X0, X0, 0: opcode 0000, func 0000, all registers zero
+        Asm.Translate("NOP.T").Should().Be(new string('0', 32),
+            because: "NOP.T must encode as all-zero 32-trit machine code");
+    }
+
+    [Fact]
+    public void LiT_X0_Zero_EncodesWithLiTOpcode()
+    {
+        // G-type: imm24=all-zero, rd1=X0=000000, opcode=0+
+        // New G-type layout: imm[23:12](12) | rd1(6) | imm[11:0](12) | opc(2)
+        var mc = Asm.Translate("LI.T X0, 0");
+        mc.Should().HaveLength(32);
+        mc[30..32].Should().Be("0+", because: "LI.T has 2-trit opcode '0+'");
+        mc[12..18].Should().Be("000000", because: "rd1=X0 at positions [12..18] in G-type layout");
     }
 
     [Fact]
     public void JalT_X0_Zero_EncodesCorrectly()
     {
-        // G-type, opcode="-+": imm24(all-zero) | rd1(X0) | "-+"
+        // G-type, opcode="+-": imm[23:12] | rd1(X0) | imm[11:0] | "+-"
         var mc = Asm.Translate("JAL.T X0, 0");
         mc.Should().HaveLength(32);
-        mc[^2..].Should().Be("-+", because: "JAL.T has 2-trit opcode '-+'");
-        mc[24..30].Should().Be("000000", because: "rd1=X0 encodes as 000000 in G-type");
+        mc[30..32].Should().Be("+-", because: "JAL.T has 2-trit opcode '+-'");
+        mc[12..18].Should().Be("000000", because: "rd1=X0 at positions [12..18] in new G-type layout");
     }
 
     [Fact]
-    public void SwaT_X0_Zero_LastCharIsMinus()
+    public void SwaT_X0_Zero_LastCharIsPlus()
     {
-        // Y-type, opcode="0-": last char must be '-'
-        Asm.Translate("SWA.T X0, 0")[^1].Should().Be('-', because: "SWA.T opcode is '0-'");
+        // Y-type, opcode="-+": last char must be '+'
+        Asm.Translate("SWA.T X0, 0")[^1].Should().Be('+', because: "SWA.T opcode is '-+', last trit is '+'");
     }
 
     [Fact]
     public void LiT_NumericImmediate_EncodesCorrectly()
     {
-        // 1 in 24-trit BT = "00000000000000000000000+"
+        // imm=1 in 24-trit BT = "00000000000000000000000+"
+        // G-type layout: imm[23:12] at mc[0..12], imm[11:0] at mc[18..30]
         var mc = Asm.Translate("LI.T X1, 1");
-        mc[..24].Should().Be("00000000000000000000000+");
+        (mc[0..12] + mc[18..30]).Should().Be("00000000000000000000000+",
+            because: "reconstructed imm24 from split G-type positions must equal 24-trit BT value of 1");
     }
 
     // =========================================================================
@@ -103,26 +122,26 @@ public class Rebel6AssemblerTests
 
     [Theory]
     // R-type
-    [InlineData("0000+-0000+000000+00000000--++--",  "ADD.T X1, X2, X3")]
-    [InlineData("0000+-0000+000000+00000000-0++--",  "SUB.T X1, X2, X3")]
+    [InlineData("0000+-0000+000000+00000000----00",  "ADD.T X1, X2, X3")]
+    [InlineData("0000+-0000+000000+00000000-0--00",  "SUB.T X1, X2, X3")]
     // I-type
-    [InlineData("0000+-0000+000000+00000000--++-+",  "ADDI.T X1, X2, X3")]  // rs2 slot → X3
+    [InlineData("0000+-0000+000000+00000000000000",  "ADDI.T X1, X2, X3")]  // rs2 slot → X3
     // NOP and MV (pseudo)
-    [InlineData("00000000000000000000000000--++-+",  "NOP.T")]
-    [InlineData("0000+-00000000000+00000000--++-+",  "MV.T X1, X2")]
+    [InlineData("00000000000000000000000000000000",  "NOP.T")]
+    [InlineData("0000+-00000000000+00000000000000",  "MV.T X1, X2")]
     // B-type
-    [InlineData("00000+0000+-00000000000000--++00",  "BEQ.T X1, X2, 0")]
+    [InlineData("00000+0000+-00000000000000--0-00",  "BEQ.T X1, X2, 0")]
     // D-type
-    [InlineData("0000+-0000+000000+0000++00--+++-",  "MAJV.T X1, X2, X3, X4")]
+    [InlineData("0000+-0000+000000+0000++00--+-00",  "MAJV.T X1, X2, X3, X4")]
     // X-type
-    [InlineData("0000+00000++00000+0000+-00--+++0",  "LI2.T X1, X2, X3, X4")]
+    [InlineData("0000+00000++00000+0000+-00--+000",  "LI2.T X1, X2, X3, X4")]
     // G-type
-    [InlineData("00000000000000000000000+00000+00",  "LI.T X1, 1")]
+    [InlineData("00000000000000000+00000000000+0+",  "LI.T X1, 1")]
     // Y-type
-    [InlineData("00000000000000000+00000+0000000-",  "SWA.T X1, 1")]
+    [InlineData("00000+00000000000000000000000+-+",  "SWA.T X1, 1")]
     // Binary
-    [InlineData("0000+-0000+000000+00000000--+0--",  "ADD X1, X2, X3")]
-    [InlineData("00000000000000000000000000--+0++",  "FENCE")]
+    [InlineData("0000+-0000+000000+00000000-----0",  "ADD X1, X2, X3")]
+    [InlineData("00000000000000000000000000--++-0",  "FENCE")]
     public void Disassemble_MachineCode_ReturnsCanonicalMnemonic(string machineCode, string expected)
     {
         Asm.Disassemble(machineCode).Should().Be(expected);
@@ -134,7 +153,7 @@ public class Rebel6AssemblerTests
     // =========================================================================
 
     [Theory]
-    // Ternary R-type (opcode ++--): func distinguishes operations
+    // Ternary R-type (opcode --00): func distinguishes operations
     [InlineData("ADD.T X1, X2, X3")]
     [InlineData("SUB.T X1, X2, X3")]
     [InlineData("SL.T X1, X2, X3")]
@@ -143,10 +162,10 @@ public class Rebel6AssemblerTests
     [InlineData("OR.T X1, X2, X3")]
     [InlineData("XOR.T X1, X2, X3")]
     [InlineData("AND.T X1, X2, X3")]
-    // Ternary misc (opcode ++-0)
+    // Ternary misc (opcode -000)
     [InlineData("CMP.T X1, X2, X3")]
     [InlineData("STI.T X1, X2")]
-    // Ternary I-type (opcode ++-+)
+    // Ternary I-type (opcode 0000)
     [InlineData("ADDI.T X1, X2, X3")]
     [InlineData("SLI.T X1, X2, X3")]
     [InlineData("SRI.T X1, X2, X3")]
@@ -154,36 +173,36 @@ public class Rebel6AssemblerTests
     [InlineData("ORI.T X1, X2, X3")]
     [InlineData("XORI.T X1, X2, X3")]
     [InlineData("ANDI.T X1, X2, X3")]
-    // Pseudo-instructions (opcode ++-+, share func with ADDI.T)
+    // Pseudo-instructions (opcode 0000, share func with ADDI.T)
     [InlineData("NOP.T")]
     [InlineData("MV.T X1, X2")]
-    // Ternary I-type load (opcode ++0-)
+    // Ternary I-type load (opcode -+00)
     [InlineData("LW.T X1, X2, X3")]
     [InlineData("LH.T X1, X2, X3")]
     [InlineData("LT.T X1, X2, X3")]
     [InlineData("JALR.T X1, X2, X3")]
-    // Ternary B-type branch (opcode ++00, offset in rd2)
+    // Ternary B-type branch (opcode 0-00, offset in rd2)
     [InlineData("BEQ.T X1, X2, 0")]
     [InlineData("BNE.T X1, X2, 0")]
     [InlineData("BLT.T X1, X2, 0")]
     [InlineData("BGE.T X1, X2, 0")]
-    // Ternary B-type store (opcode ++0+, offset in rd2)
+    // Ternary B-type store (opcode 0+00, offset in rd2)
     [InlineData("SW.T X1, X2, 0")]
     [InlineData("SH.T X1, X2, 0")]
     [InlineData("ST.T X1, X2, 0")]
-    // D-type (opcode +++-): 4 operands
+    // D-type (opcode +-00): 4 operands
     [InlineData("MAJV.T X1, X2, X3, X4")]
     [InlineData("MINV.T X1, X2, X3, X4")]
-    // X-type (opcode +++0): dual dest + dual source
+    // X-type (opcode +000): dual dest + dual source
     [InlineData("LI2.T X1, X2, X3, X4")]
-    // G-type (2-trit opcode): 24-trit immediate
+    // G-type (2-trit opcode): 24-trit immediate, split around rd1
     [InlineData("LI.T X1, 1")]
     [InlineData("LWA.T X1, 1")]
     [InlineData("JAL.T X1, 1")]
     [InlineData("AIPC.T X1, 1")]
-    // Y-type (2-trit opcode): 18-trit immediate + source register
+    // Y-type (2-trit opcode): rs1 + 24-trit immediate
     [InlineData("SWA.T X1, 1")]
-    // Binary R-type (opcode +0--)
+    // Binary R-type (opcode ---0)
     [InlineData("ADD X1, X2, X3")]
     [InlineData("SUB X1, X2, X3")]
     [InlineData("SLL X1, X2, X3")]
@@ -193,7 +212,7 @@ public class Rebel6AssemblerTests
     [InlineData("OR X1, X2, X3")]
     [InlineData("XOR X1, X2, X3")]
     [InlineData("AND X1, X2, X3")]
-    // Binary I-type (opcode +0-0)
+    // Binary I-type (opcode -0-0)
     [InlineData("ADDI X1, X2, X3")]
     [InlineData("SLLI X1, X2, X3")]
     [InlineData("SRLI X1, X2, X3")]
@@ -202,29 +221,29 @@ public class Rebel6AssemblerTests
     [InlineData("ORI X1, X2, X3")]
     [InlineData("XORI X1, X2, X3")]
     [InlineData("ANDI X1, X2, X3")]
-    // Binary load (opcode +0-+)
+    // Binary load (opcode -+-0)
     [InlineData("LW X1, X2, X3")]
     [InlineData("LH X1, X2, X3")]
     [InlineData("LB X1, X2, X3")]
     [InlineData("LHU X1, X2, X3")]
     [InlineData("LBU X1, X2, X3")]
-    // Binary branch (opcode +00+ signed, +00- unsigned)
+    // Binary branch (opcode 0+-0 signed, 0--0 unsigned)
     [InlineData("BEQ X1, X2, 0")]
     [InlineData("BNE X1, X2, 0")]
     [InlineData("BLT X1, X2, 0")]
     [InlineData("BGE X1, X2, 0")]
     [InlineData("BLTU X1, X2, 0")]
     [InlineData("BGEU X1, X2, 0")]
-    // Binary store (opcode +000)
+    // Binary store (opcode 00-0)
     [InlineData("SW X1, X2, 0")]
     [InlineData("SH X1, X2, 0")]
     [InlineData("SB X1, X2, 0")]
-    // Binary control / upper-imm (opcode +0+-)
+    // Binary control / upper-imm (opcode +--0)
     [InlineData("JAL X1, X3")]
     [InlineData("JALR X1, X2, X3")]
     [InlineData("LUI X1, X3")]
     [InlineData("AUIPC X1, X3")]
-    // Binary system (opcode +0++)
+    // Binary system (opcode ++-0)
     [InlineData("FENCE")]
     [InlineData("ECALL")]
     [InlineData("EBREAK")]
@@ -243,18 +262,9 @@ public class Rebel6AssemblerTests
     // =========================================================================
 
     [Fact]
-    public void NopT_AllDataFieldsZero()
-    {
-        var mc = Asm.Translate("NOP.T");
-        mc.Should().HaveLength(32);
-        mc[..24].Should().Be(new string('0', 24), because: "NOP.T has all register fields zero");
-        mc[28..32].Should().Be("++-+", because: "NOP.T uses I-type opcode ++-+");
-    }
-
-    [Fact]
     public void MvT_SameAsAddiTWithZeroImmediate()
     {
-        // MV.T rd1, rs1 ≡ ADDI.T rd1, rs1, 0 (both use opcode ++-+, func 00--, imm=0)
+        // MV.T rd1, rs1 ≡ ADDI.T rd1, rs1, 0 (both use opcode 0000, func 0000, imm=0)
         Asm.Translate("MV.T X1, X2").Should().Be(Asm.Translate("ADDI.T X1, X2, 0"));
     }
 
@@ -270,27 +280,27 @@ public class Rebel6AssemblerTests
     // =========================================================================
 
     [Fact]
-    public void StandardInstructions_Opcode_IsLastFourTrits()
+    public void StandardInstructions_LastTrit_IsZero()
     {
-        // All 4-trit opcode instructions must have '+' as MST of opcode (mc[28])
+        // All 4-trit opcode instructions must have '0' as last trit (mc[31])
         var standardMnemonics = new[] { "ADD.T X1, X2, X3", "ADDI.T X1, X2, X3", "BEQ.T X1, X2, 0", "ADD X1, X2, X3" };
         foreach (var mnemonic in standardMnemonics)
         {
             var mc = Asm.Translate(mnemonic);
             mc.Should().HaveLength(32, because: "REBEL-6 instructions are 32 trits");
-            mc[28].Should().Be('+', because: $"'{mnemonic}' is a standard (4-trit opcode) instruction; opcode MST must be '+'");
+            mc[31].Should().Be('0', because: $"'{mnemonic}' is a standard (4-trit opcode) instruction; last trit must be '0'");
         }
     }
 
     [Fact]
-    public void LongImmediateInstructions_OpcodeMST_IsNotPlus()
+    public void LongImmediateInstructions_LastTrit_IsNotZero()
     {
-        // G/Y-type instructions: opcode has 2 trits; instruction[^4] ≠ '+'
+        // G/Y-type instructions: 2-trit opcode; last trit ≠ '0'
         var longImmMnemonics = new[] { "LI.T X1, 1", "LWA.T X1, 1", "SWA.T X1, 1", "JAL.T X1, 1" };
         foreach (var mnemonic in longImmMnemonics)
         {
             var mc = Asm.Translate(mnemonic);
-            mc[^4].Should().NotBe('+', because: $"'{mnemonic}' is a long-immediate instruction; mc[28] must not be '+'");
+            mc[^1].Should().NotBe('0', because: $"'{mnemonic}' is a long-immediate instruction; last trit must not be '0'");
         }
     }
 
@@ -366,9 +376,9 @@ public class Rebel6AssemblerTests
         var result = Asm.AssembleInstructions(source);
 
         result.Should().HaveCount(2);
-        result[0].MachineCode.Should().Be("0000+-0000+000000+00000000--++--");
+        result[0].MachineCode.Should().Be("0000+-0000+000000+00000000----00");
         result[0].Address.Should().Be("------", because: "REBEL-6 address space starts at -364 = '------'");
-        result[1].MachineCode.Should().Be("00000000000000000000000000--++-+");
+        result[1].MachineCode.Should().Be("00000000000000000000000000000000");
         result[1].Address.Should().Be("-----0", because: "second address is -363 = '-----0'");
     }
 
@@ -434,9 +444,12 @@ public class Rebel6AssemblerTests
         var result = Asm.AssembleInstructions(source);
 
         // JAL.T is at index 1; start is at index 0; offset = 0-1 = -1
-        // G-type: imm24 = -1 → "00000000000000000000000-"
+        // G-type imm24 = -1 → "00000000000000000000000-"
+        // New G-type layout: imm[23:12] at mc[0..12], imm[11:0] at mc[18..30]
         var jalMc = result[1].MachineCode;
-        jalMc[..24].Should().Be("00000000000000000000000-", because: "G-type offset -1 in 24-trit BT");
+        (jalMc[0..12] + jalMc[18..30]).Should().Be("00000000000000000000000-",
+            because: "G-type offset -1 reconstructed from split imm positions");
+        jalMc[30..32].Should().Be("+-", because: "JAL.T 2-trit opcode is '+-'");
     }
 
     // =========================================================================
@@ -448,9 +461,9 @@ public class Rebel6AssemblerTests
     {
         string[] codes =
         [
-            "0000+-0000+000000+00000000--++--",  // ADD.T X1, X2, X3
-            "00000000000000000000000000--++-+",  // NOP.T
-            "00000000000000000000000+00000+00",  // LI.T X1, 1
+            "0000+-0000+000000+00000000----00",  // ADD.T X1, X2, X3
+            "00000000000000000000000000000000",  // NOP.T
+            "00000000000000000+00000000000+0+",  // LI.T X1, 1
         ];
         var result = Asm.DisassemblePage(codes);
 
@@ -517,8 +530,8 @@ public class Rebel6AssemblerTests
         var ternaryAdd = Asm.Translate("ADD.T X1, X2, X3");
         var binaryAdd  = Asm.Translate("ADD X1, X2, X3");
 
-        ternaryAdd[28..32].Should().Be("++--", because: "ADD.T uses ternary-base opcode ++--");
-        binaryAdd[28..32].Should().Be("+0--",  because: "ADD uses binary-base opcode +0--");
+        ternaryAdd[28..32].Should().Be("--00", because: "ADD.T uses ternary-base opcode --00");
+        binaryAdd[28..32].Should().Be("---0",  because: "ADD uses binary-base opcode ---0");
         ternaryAdd.Should().NotBe(binaryAdd);
     }
 
@@ -530,7 +543,7 @@ public class Rebel6AssemblerTests
             var mc = Asm.Translate(mnemonic);
             mc[..24].Should().Be(new string('0', 24),
                 because: $"{mnemonic} is SYS-format: all register fields fixed to zero");
-            mc[28..32].Should().Be("+0++", because: $"{mnemonic} uses binary-system opcode +0++");
+            mc[28..32].Should().Be("++-0", because: $"{mnemonic} uses binary-system opcode ++-0");
         }
     }
 }

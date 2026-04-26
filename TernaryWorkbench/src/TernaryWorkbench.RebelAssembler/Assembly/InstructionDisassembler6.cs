@@ -27,15 +27,14 @@ internal static class InstructionDisassembler6
             throw new InvalidOperationException(
                 $"Instruction contains invalid characters: '{instruction}'. Only '+', '-', '0' are allowed.");
 
-        // Detect encoding class by last-2-trit prefix of the opcode
-        char msOpcode = instruction[^4]; // position 28 = MST of 4-trit opcode
-        char ms2      = instruction[^2]; // position 30 = MST of 2-trit opcode
-
-        // If last 4 chars start with '+', it's a standard (4-trit opcode) instruction
-        if (msOpcode == '+')
+        // Detect encoding class by last trit of the opcode.
+        // All 4-trit opcodes end in '0' (suffix 00, -0, or +0).
+        // All 2-trit opcodes (G/Y-type long-immediate) end in '+' or '-'.
+        char lastTrit = instruction[^1]; // last trit of the 32-trit instruction = last trit of opcode
+        if (lastTrit == '0')
             return DisassembleStandard(instruction, patterns, currentIndex);
 
-        // Otherwise it's a 2-trit long-immediate form (G or Y type)
+        // 2-trit long-immediate form (G or Y type)
         return DisassembleLongImmediate(instruction, patterns, currentIndex);
     }
 
@@ -115,20 +114,20 @@ internal static class InstructionDisassembler6
 
         if (hasDestReg)
         {
-            // G-type: imm24(24) | rd1(6) | opcode(2)
-            var rd1Trits = mc[24..30]; // positions [7:2] = 6 trits
-            var imm24    = mc[0..24];  // positions [31:8] = 24 trits
+            // G-type: imm[23:12](12) | rd1(6) | imm[11:0](12) | opc(2)
+            var rd1Trits = mc[12..18];            // rd1 slot [19:14]
+            var imm24    = mc[0..12] + mc[18..30]; // upper 12 [31:20] + lower 12 [13:2]
             var rd1Name  = FormatRegister(rd1Trits);
             var immVal   = FormatLongImmediate(imm24, currentIndex);
             return $"{pattern.Mnemonic} {rd1Name}, {immVal}";
         }
         else
         {
-            // Y-type: imm18(18) | rs1(6) | func(6) | opcode(2)
-            var rs1Trits = mc[18..24]; // positions [13:8] = 6 trits
-            var imm18    = mc[0..18];  // positions [31:14] = 18 trits
+            // Y-type: rs1(6) | imm[23:0](24) | opc(2)
+            var rs1Trits = mc[0..6];   // rs1 slot [31:26]
+            var imm24    = mc[6..30];  // imm [25:2]
             var rs1Name  = FormatRegister(rs1Trits);
-            var immVal   = FormatLongImmediate(imm18, currentIndex);
+            var immVal   = FormatLongImmediate(imm24, currentIndex);
             return $"{pattern.Mnemonic} {rs1Name}, {immVal}";
         }
     }

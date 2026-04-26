@@ -9,12 +9,27 @@ namespace TernaryWorkbench.RebelAssembler.Assembly;
 /// <c>rs1[6] | rs2[6] | rd1[6] | rd2[6] | func[4] | opcode[4]</c>
 /// </para>
 /// <para>
-/// G-type (2-trit opcode, long immediate + destination):
-/// <c>imm[24] | rd1[6] | opcode[2]</c>
+/// Opcode groups (by last 2 trits of 4-trit opcode):
+/// <c>xx00</c> = Base Ternary (R/I/B/D/X formats);
+/// <c>xx-0</c> = Base Binary (RV32I compatible);
+/// <c>xx+0</c> = Extensions (reserved for future RIBGXDY instructions).
 /// </para>
 /// <para>
-/// Y-type (2-trit opcode, long immediate + source):
-/// <c>imm[18] | rs1[6] | func[6] | opcode[2]</c>
+/// 2-trit opcode (last trit ≠ 0) — long-immediate formats:
+/// <c>++</c> LWA.T (G-type); <c>0+</c> LI.T (G-type); <c>-+</c> SWA.T (Y-type);
+/// <c>+-</c> JAL.T (G-type); <c>0-</c> AIPC.T (G-type); <c>--</c> Reserved.
+/// </para>
+/// <para>
+/// G-type (2-trit opcode, long immediate + destination):
+/// <c>imm[23:12][12] | rd1[6] | imm[11:0][12] | opc[2]</c>
+/// </para>
+/// <para>
+/// Y-type (2-trit opcode, source + long immediate):
+/// <c>rs1[6] | imm[23:0][24] | opc[2]</c>
+/// </para>
+/// <para>
+/// NOP.T encodes as all-zero 32 trits (opcode <c>0000</c>, func <c>0000</c>,
+/// all register fields zero = ADDI.T X0, X0, 0).
 /// </para>
 /// </summary>
 internal static class InstructionSet6
@@ -33,7 +48,7 @@ internal static class InstructionSet6
 
     public const string DefaultField = "000000"; // 6 trits, zero register / unused field
     public const string DefaultFunc  = "0000";   // 4-trit func field, all zero
-    public const string DefaultPaddingInstruction = "NOP.T";
+    public const string DefaultPaddingInstruction = "NOP.T"; // encodes as all-zero 32 trits
 
     // REBEL-6 page: 3^6 = 729 instruction slots
     public const int PageInstructionCount = 729;
@@ -106,189 +121,191 @@ internal static class InstructionSet6
         new Dictionary<string, InstructionPattern>(StringComparer.OrdinalIgnoreCase)
         {
             // =================================================================
-            // TERNARY BASE (opcode prefix ++)
+            // TERNARY BASE (opcode suffix 00)
+            // Detection: last trit == '0' → 4-trit opcode; NOP = all-zero (0000…0)
             // =================================================================
 
             // ----------------------------------------------------------------
-            // R-type ALU  opcode=++--  func discriminator (stored as 4 trits)
+            // R-type ALU  opcode=--00  func discriminator (stored as 4 trits)
             // ----------------------------------------------------------------
-            { "ADD.T",  new InstructionPattern("ADD.T",  "++--", [Rd1, Rs1, Rs2], Func4("00--")) },
-            { "SUB.T",  new InstructionPattern("SUB.T",  "++--", [Rd1, Rs1, Rs2], Func4("00-0")) },
-            { "SL.T",   new InstructionPattern("SL.T",   "++--", [Rd1, Rs1, Rs2], Func4("00-+")) },
-            { "SR.T",   new InstructionPattern("SR.T",   "++--", [Rd1, Rs1, Rs2], Func4("000-")) },
-            { "SLT.T",  new InstructionPattern("SLT.T",  "++--", [Rd1, Rs1, Rs2], Func4("0000")) },
-            { "OR.T",   new InstructionPattern("OR.T",   "++--", [Rd1, Rs1, Rs2], Func4("000+")) },
-            { "XOR.T",  new InstructionPattern("XOR.T",  "++--", [Rd1, Rs1, Rs2], Func4("00+-")) },
-            { "AND.T",  new InstructionPattern("AND.T",  "++--", [Rd1, Rs1, Rs2], Func4("00+0")) },
+            { "ADD.T",  new InstructionPattern("ADD.T",  "--00", [Rd1, Rs1, Rs2], Func4("00--")) },
+            { "SUB.T",  new InstructionPattern("SUB.T",  "--00", [Rd1, Rs1, Rs2], Func4("00-0")) },
+            { "SL.T",   new InstructionPattern("SL.T",   "--00", [Rd1, Rs1, Rs2], Func4("00-+")) },
+            { "SR.T",   new InstructionPattern("SR.T",   "--00", [Rd1, Rs1, Rs2], Func4("000-")) },
+            { "SLT.T",  new InstructionPattern("SLT.T",  "--00", [Rd1, Rs1, Rs2], Func4("0000")) },
+            { "OR.T",   new InstructionPattern("OR.T",   "--00", [Rd1, Rs1, Rs2], Func4("000+")) },
+            { "XOR.T",  new InstructionPattern("XOR.T",  "--00", [Rd1, Rs1, Rs2], Func4("00+-")) },
+            { "AND.T",  new InstructionPattern("AND.T",  "--00", [Rd1, Rs1, Rs2], Func4("00+0")) },
 
             // ----------------------------------------------------------------
-            // R-type misc  opcode=++-0
+            // R-type misc  opcode=-000
             // ----------------------------------------------------------------
-            { "CMP.T",  new InstructionPattern("CMP.T",  "++-0", [Rd1, Rs1, Rs2], Func4("00--")) },
-            { "STI.T",  new InstructionPattern("STI.T",  "++-0", [Rd1, Rs1],
+            { "CMP.T",  new InstructionPattern("CMP.T",  "-000", [Rd1, Rs1, Rs2], Func4("00--")) },
+            { "STI.T",  new InstructionPattern("STI.T",  "-000", [Rd1, Rs1],
                 Merge(Func4("00-0"), Fixed(Rs2, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // I-type ALU  opcode=++-+   (Imm → rs2 slot)
+            // I-type ALU  opcode=0000   (Imm → rs2 slot; NOP = all-zero)
+            // Func 0000 = ADDI.T, others follow
             // ----------------------------------------------------------------
-            { "ADDI.T",  new InstructionPattern("ADDI.T",  "++-+", [Rd1, Rs1, Imm], Func4("00--")) },
-            { "SLI.T",   new InstructionPattern("SLI.T",   "++-+", [Rd1, Rs1, Imm], Func4("00-0")) },
-            { "SRI.T",   new InstructionPattern("SRI.T",   "++-+", [Rd1, Rs1, Imm], Func4("00-+")) },
-            { "SLTI.T",  new InstructionPattern("SLTI.T",  "++-+", [Rd1, Rs1, Imm], Func4("000-")) },
-            { "ORI.T",   new InstructionPattern("ORI.T",   "++-+", [Rd1, Rs1, Imm], Func4("0000")) },
-            { "XORI.T",  new InstructionPattern("XORI.T",  "++-+", [Rd1, Rs1, Imm], Func4("000+")) },
-            { "ANDI.T",  new InstructionPattern("ANDI.T",  "++-+", [Rd1, Rs1, Imm], Func4("00+-")) },
+            { "ADDI.T",  new InstructionPattern("ADDI.T",  "0000", [Rd1, Rs1, Imm], Func4("0000")) },
+            { "SLI.T",   new InstructionPattern("SLI.T",   "0000", [Rd1, Rs1, Imm], Func4("00--")) },
+            { "SRI.T",   new InstructionPattern("SRI.T",   "0000", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "SLTI.T",  new InstructionPattern("SLTI.T",  "0000", [Rd1, Rs1, Imm], Func4("00-+")) },
+            { "ORI.T",   new InstructionPattern("ORI.T",   "0000", [Rd1, Rs1, Imm], Func4("000-")) },
+            { "XORI.T",  new InstructionPattern("XORI.T",  "0000", [Rd1, Rs1, Imm], Func4("000+")) },
+            { "ANDI.T",  new InstructionPattern("ANDI.T",  "0000", [Rd1, Rs1, Imm], Func4("00+-")) },
 
-            // Pseudo-instructions (reuse ADDI.T encoding)
-            { "NOP.T",   new InstructionPattern("NOP.T",   "++-+", [],
-                Merge(Func4("00--"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
-            { "MV.T",    new InstructionPattern("MV.T",    "++-+", [Rd1, Rs1],
-                Merge(Func4("00--"), Fixed(Rs2, DefaultField), Fixed(Rd2, DefaultField))) },
-
-            // ----------------------------------------------------------------
-            // I-type load  opcode=++0-   (Imm → rs2 slot)
-            // ----------------------------------------------------------------
-            { "LW.T",    new InstructionPattern("LW.T",    "++0-", [Rd1, Rs1, Imm], Func4("00--")) },
-            { "LH.T",    new InstructionPattern("LH.T",    "++0-", [Rd1, Rs1, Imm], Func4("00-0")) },
-            { "LT.T",    new InstructionPattern("LT.T",    "++0-", [Rd1, Rs1, Imm], Func4("00-+")) },
-            { "JALR.T",  new InstructionPattern("JALR.T",  "++0-", [Rd1, Rs1, Imm], Func4("000-")) },
+            // Pseudo-instructions (reuse ADDI.T encoding with func 0000)
+            { "NOP.T",   new InstructionPattern("NOP.T",   "0000", [],
+                Merge(Func4("0000"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
+            { "MV.T",    new InstructionPattern("MV.T",    "0000", [Rd1, Rs1],
+                Merge(Func4("0000"), Fixed(Rs2, DefaultField), Fixed(Rd2, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // B-type branch  opcode=++00   (Offset → rd2 slot, Rd1 fixed)
+            // I-type load  opcode=-+00   (Imm → rs2 slot)
             // ----------------------------------------------------------------
-            { "BEQ.T",   new InstructionPattern("BEQ.T",   "++00", [Rs1, Rs2, Offset],
+            { "LW.T",    new InstructionPattern("LW.T",    "-+00", [Rd1, Rs1, Imm], Func4("00--")) },
+            { "LH.T",    new InstructionPattern("LH.T",    "-+00", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "LT.T",    new InstructionPattern("LT.T",    "-+00", [Rd1, Rs1, Imm], Func4("00-+")) },
+            { "JALR.T",  new InstructionPattern("JALR.T",  "-+00", [Rd1, Rs1, Imm], Func4("000-")) },
+
+            // ----------------------------------------------------------------
+            // B-type branch  opcode=0-00   (Offset → rd2 slot, Rd1 fixed)
+            // ----------------------------------------------------------------
+            { "BEQ.T",   new InstructionPattern("BEQ.T",   "0-00", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "BNE.T",   new InstructionPattern("BNE.T",   "++00", [Rs1, Rs2, Offset],
+            { "BNE.T",   new InstructionPattern("BNE.T",   "0-00", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "BLT.T",   new InstructionPattern("BLT.T",   "++00", [Rs1, Rs2, Offset],
+            { "BLT.T",   new InstructionPattern("BLT.T",   "0-00", [Rs1, Rs2, Offset],
                 Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
-            { "BGE.T",   new InstructionPattern("BGE.T",   "++00", [Rs1, Rs2, Offset],
+            { "BGE.T",   new InstructionPattern("BGE.T",   "0-00", [Rs1, Rs2, Offset],
                 Merge(Func4("000-"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // B-type store  opcode=++0+   (Offset/Imm → rd2 slot, Rd1 fixed)
+            // B-type store  opcode=0+00   (Offset/Imm → rd2 slot, Rd1 fixed)
             // ----------------------------------------------------------------
-            { "SW.T",    new InstructionPattern("SW.T",    "++0+", [Rs1, Rs2, Offset],
+            { "SW.T",    new InstructionPattern("SW.T",    "0+00", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "SH.T",    new InstructionPattern("SH.T",    "++0+", [Rs1, Rs2, Offset],
+            { "SH.T",    new InstructionPattern("SH.T",    "0+00", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "ST.T",    new InstructionPattern("ST.T",    "++0+", [Rs1, Rs2, Offset],
+            { "ST.T",    new InstructionPattern("ST.T",    "0+00", [Rs1, Rs2, Offset],
                 Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // D-type (3 sources)  opcode=+++-   (Rd2 slot encodes Rs3)
+            // D-type (3 sources)  opcode=+-00   (Rd2 slot encodes Rs3)
             // ----------------------------------------------------------------
-            { "MAJV.T",  new InstructionPattern("MAJV.T",  "+++-", [Rd1, Rs1, Rs2, Rd2], Func4("00--")) },
-            { "MINV.T",  new InstructionPattern("MINV.T",  "+++-", [Rd1, Rs1, Rs2, Rd2], Func4("00-0")) },
+            { "MAJV.T",  new InstructionPattern("MAJV.T",  "+-00", [Rd1, Rs1, Rs2, Rd2], Func4("00--")) },
+            { "MINV.T",  new InstructionPattern("MINV.T",  "+-00", [Rd1, Rs1, Rs2, Rd2], Func4("00-0")) },
 
             // ----------------------------------------------------------------
-            // X-type (dual immediate)  opcode=+++0
+            // X-type (dual immediate)  opcode=+000
             // [Rd1, Rd2, Rs1, Rs2] — Rs1/Rs2 slots carry the two immediates
             // ----------------------------------------------------------------
-            { "LI2.T",   new InstructionPattern("LI2.T",   "+++0", [Rd1, Rd2, Rs1, Rs2], Func4("00--")) },
+            { "LI2.T",   new InstructionPattern("LI2.T",   "+000", [Rd1, Rd2, Rs1, Rs2], Func4("00--")) },
 
             // =================================================================
-            // LONG-IMMEDIATE FORMS (2-trit opcode)
-            // G-type: imm24(24) | rd1_as_func(6) | opcode(2)
-            // Y-type: imm18(18) | rs1(6)          | func(6=000000) | opcode(2)
+            // LONG-IMMEDIATE FORMS (2-trit opcode, last trit ≠ 0)
+            // G-type: imm[23:12](12) | rd1(6) | imm[11:0](12) | opc(2)
+            // Y-type: rs1(6) | imm[23:0](24) | opc(2)
             // =================================================================
-            { "LWA.T",   new InstructionPattern("LWA.T",   "0+",  [Rd1, Imm]) },
-            { "LI.T",    new InstructionPattern("LI.T",    "00",  [Rd1, Imm]) },
-            { "SWA.T",   new InstructionPattern("SWA.T",   "0-",  [Rs1, Imm]) },
-            { "JAL.T",   new InstructionPattern("JAL.T",   "-+",  [Rd1, Imm]) },
-            { "AIPC.T",  new InstructionPattern("AIPC.T",  "-0",  [Rd1, Imm]) },
+            { "LWA.T",   new InstructionPattern("LWA.T",   "++",  [Rd1, Imm]) },
+            { "LI.T",    new InstructionPattern("LI.T",    "0+",  [Rd1, Imm]) },
+            { "SWA.T",   new InstructionPattern("SWA.T",   "-+",  [Rs1, Imm]) },
+            { "JAL.T",   new InstructionPattern("JAL.T",   "+-",  [Rd1, Imm]) },
+            { "AIPC.T",  new InstructionPattern("AIPC.T",  "0-",  [Rd1, Imm]) },
 
             // =================================================================
-            // BINARY BASE (opcode prefix +0)
+            // BINARY BASE (opcode suffix -0)
             // =================================================================
 
             // ----------------------------------------------------------------
-            // R-type binary ALU  opcode=+0--
+            // R-type binary ALU  opcode=---0
             // ----------------------------------------------------------------
-            { "ADD",     new InstructionPattern("ADD",  "+0--", [Rd1, Rs1, Rs2], Func4("00--")) },
-            { "SUB",     new InstructionPattern("SUB",  "+0--", [Rd1, Rs1, Rs2], Func4("00-0")) },
-            { "SLL",     new InstructionPattern("SLL",  "+0--", [Rd1, Rs1, Rs2], Func4("00-+")) },
-            { "SRL",     new InstructionPattern("SRL",  "+0--", [Rd1, Rs1, Rs2], Func4("000-")) },
-            { "SRA",     new InstructionPattern("SRA",  "+0--", [Rd1, Rs1, Rs2], Func4("0000")) },
-            { "SLTU",    new InstructionPattern("SLTU", "+0--", [Rd1, Rs1, Rs2], Func4("000+")) },
-            { "OR",      new InstructionPattern("OR",   "+0--", [Rd1, Rs1, Rs2], Func4("00+-")) },
-            { "XOR",     new InstructionPattern("XOR",  "+0--", [Rd1, Rs1, Rs2], Func4("00+0")) },
-            { "AND",     new InstructionPattern("AND",  "+0--", [Rd1, Rs1, Rs2], Func4("00++")) },
+            { "ADD",     new InstructionPattern("ADD",  "---0", [Rd1, Rs1, Rs2], Func4("00--")) },
+            { "SUB",     new InstructionPattern("SUB",  "---0", [Rd1, Rs1, Rs2], Func4("00-0")) },
+            { "SLL",     new InstructionPattern("SLL",  "---0", [Rd1, Rs1, Rs2], Func4("00-+")) },
+            { "SRL",     new InstructionPattern("SRL",  "---0", [Rd1, Rs1, Rs2], Func4("000-")) },
+            { "SRA",     new InstructionPattern("SRA",  "---0", [Rd1, Rs1, Rs2], Func4("0000")) },
+            { "SLTU",    new InstructionPattern("SLTU", "---0", [Rd1, Rs1, Rs2], Func4("000+")) },
+            { "OR",      new InstructionPattern("OR",   "---0", [Rd1, Rs1, Rs2], Func4("00+-")) },
+            { "XOR",     new InstructionPattern("XOR",  "---0", [Rd1, Rs1, Rs2], Func4("00+0")) },
+            { "AND",     new InstructionPattern("AND",  "---0", [Rd1, Rs1, Rs2], Func4("00++")) },
 
             // ----------------------------------------------------------------
-            // I-type binary ALU  opcode=+0-0  (Imm → rs2 slot)
+            // I-type binary ALU  opcode=-0-0  (Imm → rs2 slot)
             // ----------------------------------------------------------------
-            { "ADDI",    new InstructionPattern("ADDI",  "+0-0", [Rd1, Rs1, Imm], Func4("00--")) },
-            { "SLLI",    new InstructionPattern("SLLI",  "+0-0", [Rd1, Rs1, Imm], Func4("00-0")) },
-            { "SRLI",    new InstructionPattern("SRLI",  "+0-0", [Rd1, Rs1, Imm], Func4("00-+")) },
-            { "SRAI",    new InstructionPattern("SRAI",  "+0-0", [Rd1, Rs1, Imm], Func4("000-")) },
-            { "SLTIU",   new InstructionPattern("SLTIU", "+0-0", [Rd1, Rs1, Imm], Func4("0000")) },
-            { "ORI",     new InstructionPattern("ORI",   "+0-0", [Rd1, Rs1, Imm], Func4("000+")) },
-            { "XORI",    new InstructionPattern("XORI",  "+0-0", [Rd1, Rs1, Imm], Func4("00+-")) },
-            { "ANDI",    new InstructionPattern("ANDI",  "+0-0", [Rd1, Rs1, Imm], Func4("00+0")) },
+            { "ADDI",    new InstructionPattern("ADDI",  "-0-0", [Rd1, Rs1, Imm], Func4("00--")) },
+            { "SLLI",    new InstructionPattern("SLLI",  "-0-0", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "SRLI",    new InstructionPattern("SRLI",  "-0-0", [Rd1, Rs1, Imm], Func4("00-+")) },
+            { "SRAI",    new InstructionPattern("SRAI",  "-0-0", [Rd1, Rs1, Imm], Func4("000-")) },
+            { "SLTIU",   new InstructionPattern("SLTIU", "-0-0", [Rd1, Rs1, Imm], Func4("0000")) },
+            { "ORI",     new InstructionPattern("ORI",   "-0-0", [Rd1, Rs1, Imm], Func4("000+")) },
+            { "XORI",    new InstructionPattern("XORI",  "-0-0", [Rd1, Rs1, Imm], Func4("00+-")) },
+            { "ANDI",    new InstructionPattern("ANDI",  "-0-0", [Rd1, Rs1, Imm], Func4("00+0")) },
 
             // ----------------------------------------------------------------
-            // I-type binary load  opcode=+0-+  (Imm → rs2 slot)
+            // I-type binary load  opcode=-+-0  (Imm → rs2 slot)
             // ----------------------------------------------------------------
-            { "LW",      new InstructionPattern("LW",  "+0-+", [Rd1, Rs1, Imm], Func4("00--")) },
-            { "LH",      new InstructionPattern("LH",  "+0-+", [Rd1, Rs1, Imm], Func4("00-0")) },
-            { "LB",      new InstructionPattern("LB",  "+0-+", [Rd1, Rs1, Imm], Func4("00-+")) },
-            { "LHU",     new InstructionPattern("LHU", "+0-+", [Rd1, Rs1, Imm], Func4("000-")) },
-            { "LBU",     new InstructionPattern("LBU", "+0-+", [Rd1, Rs1, Imm], Func4("0000")) },
+            { "LW",      new InstructionPattern("LW",  "-+-0", [Rd1, Rs1, Imm], Func4("00--")) },
+            { "LH",      new InstructionPattern("LH",  "-+-0", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "LB",      new InstructionPattern("LB",  "-+-0", [Rd1, Rs1, Imm], Func4("00-+")) },
+            { "LHU",     new InstructionPattern("LHU", "-+-0", [Rd1, Rs1, Imm], Func4("000-")) },
+            { "LBU",     new InstructionPattern("LBU", "-+-0", [Rd1, Rs1, Imm], Func4("0000")) },
 
             // ----------------------------------------------------------------
-            // B-type binary unsigned branch  opcode=+00-  (Offset → rd2 slot)
+            // B-type binary unsigned branch  opcode=0--0  (Offset → rd2 slot)
             // ----------------------------------------------------------------
-            { "BLTU",    new InstructionPattern("BLTU", "+00-", [Rs1, Rs2, Offset],
+            { "BLTU",    new InstructionPattern("BLTU", "0--0", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "BGEU",    new InstructionPattern("BGEU", "+00-", [Rs1, Rs2, Offset],
+            { "BGEU",    new InstructionPattern("BGEU", "0--0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // B-type binary signed branch  opcode=+00+  (Offset → rd2 slot)
+            // B-type binary signed branch  opcode=0+-0  (Offset → rd2 slot)
             // ----------------------------------------------------------------
-            { "BEQ",     new InstructionPattern("BEQ",  "+00+", [Rs1, Rs2, Offset],
+            { "BEQ",     new InstructionPattern("BEQ",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "BNE",     new InstructionPattern("BNE",  "+00+", [Rs1, Rs2, Offset],
+            { "BNE",     new InstructionPattern("BNE",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "BLT",     new InstructionPattern("BLT",  "+00+", [Rs1, Rs2, Offset],
+            { "BLT",     new InstructionPattern("BLT",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
-            { "BGE",     new InstructionPattern("BGE",  "+00+", [Rs1, Rs2, Offset],
+            { "BGE",     new InstructionPattern("BGE",  "0+-0", [Rs1, Rs2, Offset],
                 Merge(Func4("000-"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // B-type binary store  opcode=+000  (Offset → rd2 slot)
+            // B-type binary store  opcode=00-0  (Offset → rd2 slot)
             // ----------------------------------------------------------------
-            { "SW",      new InstructionPattern("SW",  "+000", [Rs1, Rs2, Offset],
+            { "SW",      new InstructionPattern("SW",  "00-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00--"), Fixed(Rd1, DefaultField))) },
-            { "SH",      new InstructionPattern("SH",  "+000", [Rs1, Rs2, Offset],
+            { "SH",      new InstructionPattern("SH",  "00-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-0"), Fixed(Rd1, DefaultField))) },
-            { "SB",      new InstructionPattern("SB",  "+000", [Rs1, Rs2, Offset],
+            { "SB",      new InstructionPattern("SB",  "00-0", [Rs1, Rs2, Offset],
                 Merge(Func4("00-+"), Fixed(Rd1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // Binary control flow  opcode=+0+-
+            // Binary control flow  opcode=+--0
             // ----------------------------------------------------------------
-            { "JAL",     new InstructionPattern("JAL",  "+0+-", [Rd1, Imm],
+            { "JAL",     new InstructionPattern("JAL",  "+--0", [Rd1, Imm],
                 Merge(Func4("00--"), Fixed(Rs1, DefaultField))) },
-            { "JALR",    new InstructionPattern("JALR", "+0+-", [Rd1, Rs1, Imm], Func4("00-0")) },
+            { "JALR",    new InstructionPattern("JALR", "+--0", [Rd1, Rs1, Imm], Func4("00-0")) },
 
             // ----------------------------------------------------------------
-            // Binary upper immediate  opcode=+0+0
+            // Binary upper immediate  opcode=+0-0
             // ----------------------------------------------------------------
-            { "LUI",     new InstructionPattern("LUI",   "+0+0", [Rd1, Imm],
+            { "LUI",     new InstructionPattern("LUI",   "+0-0", [Rd1, Imm],
                 Merge(Func4("00--"), Fixed(Rs1, DefaultField))) },
-            { "AUIPC",   new InstructionPattern("AUIPC", "+0+0", [Rd1, Imm],
+            { "AUIPC",   new InstructionPattern("AUIPC", "+0-0", [Rd1, Imm],
                 Merge(Func4("00-0"), Fixed(Rs1, DefaultField))) },
 
             // ----------------------------------------------------------------
-            // Binary system  opcode=+0++
+            // Binary system  opcode=++-0
             // ----------------------------------------------------------------
-            { "FENCE",   new InstructionPattern("FENCE",  "+0++", [],
+            { "FENCE",   new InstructionPattern("FENCE",  "++-0", [],
                 Merge(Func4("00--"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
-            { "ECALL",   new InstructionPattern("ECALL",  "+0++", [],
+            { "ECALL",   new InstructionPattern("ECALL",  "++-0", [],
                 Merge(Func4("00-0"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
-            { "EBREAK",  new InstructionPattern("EBREAK", "+0++", [],
+            { "EBREAK",  new InstructionPattern("EBREAK", "++-0", [],
                 Merge(Func4("00-+"), Fixed(Rs1, DefaultField), Fixed(Rs2, DefaultField), Fixed(Rd1, DefaultField), Fixed(Rd2, DefaultField))) },
         };
 

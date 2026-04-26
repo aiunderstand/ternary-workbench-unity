@@ -96,19 +96,19 @@ internal static class InstructionEncoder6
 
         if (hasDestReg)
         {
-            // G-type: imm24(24) | rd1(6) | opcode(2)
+            // G-type: imm[23:12](12) | rd1(6) | imm[11:0](12) | opc(2)
             var rd1Trits = ParseRegisterOrTrit(operands[0], lineNumber);
             var immTok   = operands[1];
             var imm24    = ParseLongImmediate(immTok, 24, lineNumber, labels, currentIndex);
-            return imm24 + rd1Trits + pattern.Opcode;
+            return imm24[0..12] + rd1Trits + imm24[12..24] + pattern.Opcode;
         }
         else if (hasSrcReg)
         {
-            // Y-type: imm18(18) | rs1(6) | func(6=000000) | opcode(2)
+            // Y-type: rs1(6) | imm[23:0](24) | opc(2)
             var rs1Trits = ParseRegisterOrTrit(operands[0], lineNumber);
             var immTok   = operands[1];
-            var imm18    = ParseLongImmediate(immTok, 18, lineNumber, labels, currentIndex);
-            return imm18 + rs1Trits + "000000" + pattern.Opcode;
+            var imm24    = ParseLongImmediate(immTok, 24, lineNumber, labels, currentIndex);
+            return rs1Trits + imm24 + pattern.Opcode;
         }
         else
         {

@@ -7,13 +7,17 @@ namespace TernaryWorkbench.RebelAssembler;
 /// Public facade for assembling and disassembling REBEL-6 programs.
 /// </summary>
 /// <remarks>
-/// REBEL-6 differences from REBEL-2:
+/// REBEL-6 is the successor to REBEL-2 for real-world applications. Key differences:
 /// <list type="bullet">
-///   <item>Instructions are 32 trits wide (not 10).</item>
-///   <item>729 registers (6-trit address), PC increments by 1 per instruction slot.</item>
-///   <item>7 instruction formats: R, I, B, D, X (4-trit opcode), G, Y (2-trit opcode).</item>
+///   <item>Instructions are 32 trits wide (vs 10 trits in REBEL-2).</item>
+///   <item>729 registers (6-trit address, vs 9 registers in REBEL-2); X0 hardwired zero.</item>
+///   <item>63+ instructions (vs 9 in REBEL-2), with 8 instruction formats: R, I, B, D, X (4-trit opcode), G, Y (2-trit opcode), L (RV32I pass-through).</item>
 ///   <item>Dedicated 4-trit func field (not encoded in Rd2 as in REBEL-2).</item>
-///   <item>RV32I binary compatibility via binary instruction group (opcode prefix +0).</item>
+///   <item>Register width 24 trits (vs 2 trits in REBEL-2).</item>
+///   <item><b>NOP.T</b> encodes as all-zero 32 trits (opcode <c>0000</c>, func <c>0000</c>).</item>
+///   <item><b>Opcode groups</b> by last 2 trits: <c>xx00</c> = Base Ternary; <c>xx-0</c> = Base Binary (RV32I); <c>xx+0</c> = Extensions. Last trit ≠ 0 = 2-trit long-immediate opcode.</item>
+///   <item><b>Reserved</b>: 2-trit opcode <c>--</c> is reserved (not assigned to any instruction).</item>
+///   <item><b>Full RV32I binary compatibility</b> (L-type): a hardware flag enables direct execution of native RV32I 32-bit instructions without recompilation. Binary is a subset of ternary — 32 bits fit exactly in 32 trits by using only the extremes (+/−). A hardware binary-ternary ALU and instruction translator handle the mapping transparently.</item>
 /// </list>
 /// </remarks>
 public static class Rebel6Assembler
