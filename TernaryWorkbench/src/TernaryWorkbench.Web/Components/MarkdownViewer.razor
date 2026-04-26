@@ -1,0 +1,45 @@
+@inject HttpClient Http
+@using Markdig
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="ma-2" />
+}
+else if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+}
+else
+{
+    <div class="md-content">@((MarkupString)_html)</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string FilePath { get; set; } = default!;
+
+    private string _html = string.Empty;
+    private string? _error;
+    private bool _loading = true;
+
+    private static readonly MarkdownPipeline _pipeline =
+        new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var md = await Http.GetStringAsync(FilePath);
+            _html = Markdown.ToHtml(md, _pipeline);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load {FilePath}: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

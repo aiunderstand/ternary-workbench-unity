@@ -169,50 +169,12 @@
 
             <!-- charT_u8 spec -->
             <MudExpansionPanel Text="charT_u8 Standard Definition" Icon="@Icons.Material.Filled.Info">
-                <MudText Typo="Typo.body2" Style="white-space: pre-wrap" Class="mb-3">
-                    @CharTu8StandardTable.SpecificationText
-                </MudText>
-
-                <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">1-Tryte Code-Point Table (CP 0–125)</MudText>
-                <MudTable Items="@CharTu8StandardTable.SingleTryteTable" Dense="true" Striped="true"
-                          Bordered="true" Elevation="0" FixedHeader="true" Height="300px">
-                    <HeaderContent>
-                        <MudTh>CP</MudTh>
-                        <MudTh>Tryte</MudTh>
-                        <MudTh>Unicode</MudTh>
-                        <MudTh>Description</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd>@context.CodePoint</MudTd>
-                        <MudTd Style="font-family:monospace">@context.TrytePattern</MudTd>
-                        <MudTd>@(context.UnicodeCodePoint.HasValue ? $"U+{context.UnicodeCodePoint.Value:X4}" : "—")</MudTd>
-                        <MudTd>@context.Description</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                <MarkdownViewer FilePath="/docs/chart-u8-standard.md" />
             </MudExpansionPanel>
 
             <!-- charTC_u8 spec -->
             <MudExpansionPanel Text="charTC_u8 Standard Definition" Icon="@Icons.Material.Filled.Info">
-                <MudText Typo="Typo.body2" Style="white-space: pre-wrap" Class="mb-3">
-                    @CharTCu8StandardTable.SpecificationText
-                </MudText>
-
-                <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">1-Tryte Code-Point Table (42 characters)</MudText>
-                <MudTable Items="@CharTCu8StandardTable.SingleTryteTable" Dense="true" Striped="true"
-                          Bordered="true" Elevation="0">
-                    <HeaderContent>
-                        <MudTh>CP</MudTh>
-                        <MudTh>Tryte</MudTh>
-                        <MudTh>Unicode</MudTh>
-                        <MudTh>Description</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd>@context.CodePoint</MudTd>
-                        <MudTd Style="font-family:monospace">@context.TrytePattern</MudTd>
-                        <MudTd>@(context.UnicodeCodePoint.HasValue ? $"U+{context.UnicodeCodePoint.Value:X4}" : "—")</MudTd>
-                        <MudTd>@context.Description</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                <MarkdownViewer FilePath="/docs/chartc-u8-standard.md" />
             </MudExpansionPanel>
 
         </MudExpansionPanels>

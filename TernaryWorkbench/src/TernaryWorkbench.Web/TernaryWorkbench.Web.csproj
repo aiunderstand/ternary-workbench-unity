@@ -8,10 +8,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.40.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" PrivateAssets="all" />
     <PackageReference Include="MudBlazor" Version="9.3.0" />
   </ItemGroup>
+
+  <Target Name="CopyDocsToWwwroot" BeforeTargets="Build;Publish">
+    <PropertyGroup>
+      <_RepoDocsDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../../docs'))</_RepoDocsDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DocFiles Include="$(_RepoDocsDir)/*.md" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)/wwwroot/docs" />
+    <Copy SourceFiles="@(_DocFiles)"
+          DestinationFolder="$(MSBuildProjectDirectory)/wwwroot/docs/"
+          SkipUnchangedFiles="true" />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\TernaryWorkbench.CharTStringConverter\TernaryWorkbench.CharTStringConverter.csproj" />

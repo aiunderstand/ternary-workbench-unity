@@ -38,3 +38,6 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+# Generated copies of docs/ for Blazor static web assets
+TernaryWorkbench/src/TernaryWorkbench.Web/wwwroot/docs/
