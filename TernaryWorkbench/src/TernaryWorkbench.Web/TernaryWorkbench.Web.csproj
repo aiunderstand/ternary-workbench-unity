@@ -14,18 +14,10 @@
     <PackageReference Include="MudBlazor" Version="9.3.0" />
   </ItemGroup>
 
-  <Target Name="CopyDocsToWwwroot" BeforeTargets="Build;Publish">
-    <PropertyGroup>
-      <_RepoDocsDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../../docs'))</_RepoDocsDir>
-    </PropertyGroup>
-    <ItemGroup>
-      <_DocFiles Include="$(_RepoDocsDir)/*.md" />
-    </ItemGroup>
-    <MakeDir Directories="$(MSBuildProjectDirectory)/wwwroot/docs" />
-    <Copy SourceFiles="@(_DocFiles)"
-          DestinationFolder="$(MSBuildProjectDirectory)/wwwroot/docs/"
-          SkipUnchangedFiles="true" />
-  </Target>
+  <ItemGroup>
+    <Content Include="../../../docs/*.md" Link="wwwroot/docs/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../docs/images/*" Link="wwwroot/docs/images/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TernaryWorkbench.CharTStringConverter\TernaryWorkbench.CharTStringConverter.csproj" />

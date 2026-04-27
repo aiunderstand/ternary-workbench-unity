@@ -26,7 +26,11 @@ For the desktop version of Surfer, a precompiled translator plugin is available:
 
 ## Test Waveform
 
-A sample waveform file demonstrating all ternary signal types is available:
+A sample waveform file (`tvhdl_surfer_test.ghw`) demonstrates all supported ternary signal types: `btern_ulogic`, `btern_ulogic_vector`, `kleene`, and `kleene_vector`.
+
+**[Open test waveform in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw)** — opens the waveviewer in a new tab and loads the file automatically.
+
+You can also download the file and open it manually via **File → Open**:
 
 - **Download**: [`tvhdl_surfer_test.ghw`](https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw)
 
