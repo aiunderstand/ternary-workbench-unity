@@ -24,15 +24,17 @@ For the desktop version of Surfer, a precompiled translator plugin is available:
 - Place the `.wasm` file in your Surfer translator directory (`~/.local/share/surfer/translators/` on Linux/macOS).
 - Surfer will automatically discover and load it on next start.
 
-## Test Waveform
+## Example Waveforms
 
-A sample waveform file (`tvhdl_surfer_test.ghw`) demonstrates all supported ternary signal types: `btern_ulogic`, `btern_ulogic_vector`, `kleene`, and `kleene_vector`.
+Click any link below to open the waveviewer in a new tab and load the file automatically.
 
-**[Open test waveform in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw)** — opens the waveviewer in a new tab and loads the file automatically.
+| Example | Description | Open |
+|---|---|---|
+| `tvhdl_surfer_test.ghw` | All supported ternary signal types (`btern_ulogic`, `btern_ulogic_vector`, `kleene`, `kleene_vector`) | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw) |
+| `ternary-data-flip-flop.ghw` | Ternary data flip-flop simulation | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary-data-flip-flop.ghw) |
+| `ternary-full-adder.ghw` | Ternary full adder simulation | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary-full-adder.ghw) |
 
-You can also download the file and open it manually via **File → Open**:
-
-- **Download**: [`tvhdl_surfer_test.ghw`](https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw)
+You can also download any file and open it manually via **File → Open**.
 
 ## Source Code
 

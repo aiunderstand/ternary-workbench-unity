@@ -14,10 +14,24 @@
     <PackageReference Include="MudBlazor" Version="9.3.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="../../../docs/*.md" Link="wwwroot/docs/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../../../docs/images/*" Link="wwwroot/docs/images/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+  <Target Name="CopyDocsToWwwroot" BeforeTargets="Build;Publish">
+    <PropertyGroup>
+      <_RepoDocsDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../../docs'))</_RepoDocsDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DocFiles Include="$(_RepoDocsDir)/*.md" />
+      <_DocImages Include="$(_RepoDocsDir)/images/*" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)/wwwroot/docs" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)/wwwroot/docs/images" Condition="'@(_DocImages)' != ''" />
+    <Copy SourceFiles="@(_DocFiles)"
+          DestinationFolder="$(MSBuildProjectDirectory)/wwwroot/docs/"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_DocImages)"
+          DestinationFolder="$(MSBuildProjectDirectory)/wwwroot/docs/images/"
+          SkipUnchangedFiles="true"
+          Condition="'@(_DocImages)' != ''" />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\TernaryWorkbench.CharTStringConverter\TernaryWorkbench.CharTStringConverter.csproj" />
