@@ -31,8 +31,8 @@ Click any link below to open the waveviewer in a new tab and load the file autom
 | Example | Description | Open |
 |---|---|---|
 | `tvhdl_surfer_test.ghw` | All supported ternary signal types (`btern_ulogic`, `btern_ulogic_vector`, `kleene`, `kleene_vector`) | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/tvhdl_surfer_test.ghw) |
-| `ternary-data-flip-flop.ghw` | Ternary data flip-flop simulation | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary_data_flip_flop.ghw) |
-| `ternary-full-adder.ghw` | Ternary full adder simulation | [Open in Surfer](https://aiunderstand.github.io/surfer-ternary-waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary_full_adder.ghw) |
+| `ternary_data_flip_flop.ghw` | Ternary data flip-flop simulation | [Open in Surfer](https://aiunderstand.github.io/surfer_ternary_waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary_data_flip_flop.ghw) |
+| `ternary_full_adder.ghw` | Ternary full adder simulation | [Open in Surfer](https://aiunderstand.github.io/surfer_ternary_waveviewer/?load_url=https://aiunderstand.github.io/surfer-ternary-waveviewer/ternary_full_adder.ghw) |
 
 You can also download any file and open it manually via **File → Open**.
 
